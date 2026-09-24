@@ -1,0 +1,40 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: account-service
+  jackson:
+    default-property-inclusion: non_null
+
+jwt:
+  # NOTE: all four RideLink services must share this exact secret so tokens
+  # issued by account-service validate correctly everywhere else.
+  secret: ${JWT_SECRET:ridelink-shared-super-secret-key-change-me-in-prod-0123456789}
+  expiration-ms: ${JWT_EXPIRATION_MS:86400000} # 24h
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+logging:
+  level:
+    com.ridelink.account: INFO
+
+---
+# Real MongoDB connection - inactive under the "test" profile so tests
+# can fall back to Spring Boot's embedded Mongo auto-configuration,
+# which backs off as soon as the connection is explicitly configured.
+# Set MONGODB_URI to a full connection string (e.g. an Atlas SRV URI with
+# credentials) instead of separate host/port/username/password fields -
+# binding an unset username/password to Mongo's char[] password property
+# throws a NullPointerException in Spring Boot 3.2.
+spring:
+  config:
+    activate:
+      on-profile: '!test'
+  data:
+    mongodb:
+        uri: "mongodb+srv://kalharamax822:Brook123@brooks.wq4ubwu.mongodb.net/ridelink_accounts"

@@ -1,0 +1,591 @@
+{
+  "info": {
+    "name": "RideLink - Account Service",
+    "description": "Auth and user endpoints for account-service (port 8081).\n\nRun the requests in order: Register or Login first - both save {{token}} and {{userId}} to the collection variables automatically, so every /api/users request is authorized without copy-pasting a JWT.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8081",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "email",
+      "value": "rider@example.com",
+      "type": "string"
+    },
+    {
+      "key": "password",
+      "value": "secret123",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "POST Register",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Nimal Perera\",\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\",\n  \"phone\": \"+94771234567\",\n  \"role\": \"RIDER\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            },
+            "description": "Creates a user and returns a JWT.\n\nfullName, email and password are required. password must be at least 8 characters. role is optional and defaults to RIDER - valid values are RIDER, DRIVER, ADMIN.\n\nReturns 201 Created."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    var body = pm.response.json();",
+                  "    pm.collectionVariables.set('token', body.token);",
+                  "    pm.collectionVariables.set('userId', body.user.id);",
+                  "    console.log('Saved token and userId=' + body.user.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "201 Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"fullName\": \"Nimal Perera\",\n  \"email\": \"rider@example.com\",\n  \"password\": \"secret123\",\n  \"phone\": \"+94771234567\",\n  \"role\": \"RIDER\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/register",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "auth", "register"]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"token\": \"eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJyaWRlckBleGFtcGxlLmNvbSJ9.signature\",\n  \"tokenType\": \"Bearer\",\n  \"user\": {\n    \"id\": \"665f0a1b2c3d4e5f6a7b8c9d\",\n    \"fullName\": \"Nimal Perera\",\n    \"email\": \"rider@example.com\",\n    \"phone\": \"+94771234567\",\n    \"role\": \"RIDER\",\n    \"active\": true,\n    \"createdAt\": \"2026-09-13T13:00:33.776444200Z\"\n  }\n}"
+            },
+            {
+              "name": "400 Validation failed",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"rider@example.com\",\n  \"password\": \"short\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/register",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "auth", "register"]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"timestamp\": \"2026-09-13T13:00:33.776444200Z\",\n  \"status\": 400,\n  \"error\": \"Bad Request\",\n  \"message\": \"Validation failed\",\n  \"details\": [\n    \"fullName: must not be blank\",\n    \"password: Password must be at least 8 characters\"\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "POST Login",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Exchanges email and password for a JWT. Returns 200 OK."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    var body = pm.response.json();",
+                  "    pm.collectionVariables.set('token', body.token);",
+                  "    pm.collectionVariables.set('userId', body.user.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"rider@example.com\",\n  \"password\": \"secret123\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/login",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "auth", "login"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"token\": \"eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJyaWRlckBleGFtcGxlLmNvbSJ9.signature\",\n  \"tokenType\": \"Bearer\",\n  \"user\": {\n    \"id\": \"665f0a1b2c3d4e5f6a7b8c9d\",\n    \"fullName\": \"Nimal Perera\",\n    \"email\": \"rider@example.com\",\n    \"phone\": \"+94771234567\",\n    \"role\": \"RIDER\",\n    \"active\": true,\n    \"createdAt\": \"2026-09-13T13:00:33.776444200Z\"\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "description": "All endpoints in this folder require the Authorization: Bearer {{token}} header, which the collection adds automatically.",
+      "item": [
+        {
+          "name": "GET All users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users"]
+            },
+            "description": "Returns every user. Requires a valid JWT."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('body is an array', function () {",
+                  "    pm.expect(pm.response.json()).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "users"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "[\n  {\n    \"id\": \"665f0a1b2c3d4e5f6a7b8c9d\",\n    \"fullName\": \"Nimal Perera\",\n    \"email\": \"rider@example.com\",\n    \"phone\": \"+94771234567\",\n    \"role\": \"RIDER\",\n    \"active\": true,\n    \"createdAt\": \"2026-09-13T13:00:33.776444200Z\"\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "GET User by id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{userId}}"]
+            },
+            "description": "Returns a single user. 404 if the id does not exist."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/665f0a1b2c3d4e5f6a7b8c9d",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "users", "665f0a1b2c3d4e5f6a7b8c9d"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"665f0a1b2c3d4e5f6a7b8c9d\",\n  \"fullName\": \"Nimal Perera\",\n  \"email\": \"rider@example.com\",\n  \"phone\": \"+94771234567\",\n  \"role\": \"RIDER\",\n  \"active\": true,\n  \"createdAt\": \"2026-09-13T13:00:33.776444200Z\"\n}"
+            },
+            {
+              "name": "404 Not Found",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/000000000000000000000000",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "users", "000000000000000000000000"]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"timestamp\": \"2026-09-13T13:00:33.776444200Z\",\n  \"status\": 404,\n  \"error\": \"Not Found\",\n  \"message\": \"User not found with id: 9999\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "PUT Update user",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Nimal Perera Updated\",\n  \"email\": \"nimal.updated@example.com\",\n  \"phone\": \"+94770000000\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{userId}}"]
+            },
+            "description": "Updates a user. Every field is optional - send only what you want to change. email must be a valid address if present.\n\nNote: role, password and active are not editable through this endpoint."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"fullName\": \"Nimal Perera Updated\",\n  \"email\": \"nimal.updated@example.com\",\n  \"phone\": \"+94770000000\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/665f0a1b2c3d4e5f6a7b8c9d",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "users", "665f0a1b2c3d4e5f6a7b8c9d"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"665f0a1b2c3d4e5f6a7b8c9d\",\n  \"fullName\": \"Nimal Perera Updated\",\n  \"email\": \"nimal.updated@example.com\",\n  \"phone\": \"+94770000000\",\n  \"role\": \"RIDER\",\n  \"active\": true,\n  \"createdAt\": \"2026-09-13T13:00:33.776444200Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "PATCH Deactivate user",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{userId}}/deactivate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{userId}}", "deactivate"]
+            },
+            "description": "Soft-disables the account by setting active to false. The user row is kept."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('user is inactive', function () {",
+                  "    pm.expect(pm.response.json().active).to.eql(false);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/665f0a1b2c3d4e5f6a7b8c9d/deactivate",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "users", "665f0a1b2c3d4e5f6a7b8c9d", "deactivate"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"665f0a1b2c3d4e5f6a7b8c9d\",\n  \"fullName\": \"Nimal Perera Updated\",\n  \"email\": \"nimal.updated@example.com\",\n  \"phone\": \"+94770000000\",\n  \"role\": \"RIDER\",\n  \"active\": false,\n  \"createdAt\": \"2026-09-13T13:00:33.776444200Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "DELETE User",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{userId}}"]
+            },
+            "description": "Permanently removes the user. Returns 204 No Content with an empty body.\n\nRun this last - it deletes the user the other requests depend on."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 204', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "204 No Content",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/665f0a1b2c3d4e5f6a7b8c9d",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "users", "665f0a1b2c3d4e5f6a7b8c9d"]
+                }
+              },
+              "status": "No Content",
+              "code": 204,
+              "_postman_previewlanguage": "text",
+              "header": [],
+              "body": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "GET Health",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/actuator/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["actuator", "health"]
+        },
+        "description": "Public liveness check - use this to confirm the service is up before running anything else."
+      },
+      "response": [
+        {
+          "name": "200 OK",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["actuator", "health"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"status\": \"UP\"\n}"
+        }
+      ]
+    }
+  ]
+}
