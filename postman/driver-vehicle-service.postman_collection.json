@@ -1,0 +1,510 @@
+{
+  "info": {
+    "name": "RideLink - Driver & Vehicle Service",
+    "description": "Driver profile, approval status and vehicle endpoints (port 8082).\n\nThis service does not issue its own JWTs - it only validates tokens signed with the shared jwt.secret. Paste a token obtained from account-service's Login/Register into {{token}} (or run the account-service collection first and copy it), then run Create Driver -> Create Vehicle -> Approve -> Deactivate in order; each request auto-saves the ids it creates.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{token}}", "type": "string" }
+    ]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8082", "type": "string" },
+    { "key": "token", "value": "", "type": "string", "description": "JWT obtained from account-service's /api/auth/login or /api/auth/register" },
+    { "key": "userId", "value": "1", "type": "string", "description": "An existing account-service User.id to attach this driver profile to" },
+    { "key": "driverId", "value": "", "type": "string" },
+    { "key": "vehicleId", "value": "", "type": "string" },
+    { "key": "licenseNumber", "value": "DL-2026-00123", "type": "string" },
+    { "key": "plateNumber", "value": "WP-CAB-4521", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Drivers",
+      "item": [
+        {
+          "name": "POST Create driver profile",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": {{userId}},\n  \"licenseNumber\": \"{{licenseNumber}}\",\n  \"licenseExpiry\": \"2028-12-31\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/drivers",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "drivers"]
+            },
+            "description": "Creates a driver profile linked to an existing account-service userId. licenseNumber must be unique across all drivers, and a given userId can only have one driver profile. licenseExpiry must be a future date if provided. New drivers start in PENDING status.\n\nReturns 201 Created."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) {",
+                  "    var body = pm.response.json();",
+                  "    pm.collectionVariables.set('driverId', body.id);",
+                  "    console.log('Saved driverId=' + body.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "201 Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"userId\": 1,\n  \"licenseNumber\": \"DL-2026-00123\",\n  \"licenseExpiry\": \"2028-12-31\"\n}" },
+                "url": { "raw": "{{baseUrl}}/api/drivers", "host": ["{{baseUrl}}"], "path": ["api", "drivers"] }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"id\": 1,\n  \"userId\": 1,\n  \"licenseNumber\": \"DL-2026-00123\",\n  \"licenseExpiry\": \"2028-12-31\",\n  \"status\": \"PENDING\",\n  \"rating\": 5.0,\n  \"vehicles\": [],\n  \"createdAt\": \"2026-09-13T15:00:00Z\"\n}"
+            },
+            {
+              "name": "400 Duplicate license / user already has a profile",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"userId\": 1,\n  \"licenseNumber\": \"DL-2026-00123\"\n}" },
+                "url": { "raw": "{{baseUrl}}/api/drivers", "host": ["{{baseUrl}}"], "path": ["api", "drivers"] }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"timestamp\": \"2026-09-13T15:00:00Z\",\n  \"status\": 400,\n  \"error\": \"Bad Request\",\n  \"message\": \"This user already has a driver profile\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET All drivers (optionally by status)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/drivers?status=APPROVED",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "drivers"],
+              "query": [
+                { "key": "status", "value": "APPROVED", "description": "Optional - PENDING, APPROVED, REJECTED or SUSPENDED. Omit to list all drivers." }
+              ]
+            },
+            "description": "Lists drivers. Used by ride-management's matching step to find eligible (APPROVED) drivers - remove the status filter to see every driver regardless of approval state."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": { "type": "text/javascript", "exec": ["pm.test('status is 200', function () { pm.response.to.have.status(200); });"] }
+            }
+          ],
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "url": { "raw": "{{baseUrl}}/api/drivers?status=APPROVED", "host": ["{{baseUrl}}"], "path": ["api", "drivers"], "query": [{ "key": "status", "value": "APPROVED" }] }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "[\n  {\n    \"id\": 1,\n    \"userId\": 1,\n    \"licenseNumber\": \"DL-2026-00123\",\n    \"licenseExpiry\": \"2028-12-31\",\n    \"status\": \"APPROVED\",\n    \"rating\": 5.0,\n    \"vehicles\": [],\n    \"createdAt\": \"2026-09-13T15:00:00Z\"\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "GET Driver by id",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/drivers/{{driverId}}", "host": ["{{baseUrl}}"], "path": ["api", "drivers", "{{driverId}}"] },
+            "description": "Returns a single driver profile, including their vehicles. 404 if the id does not exist."
+          },
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('status is 200', function () { pm.response.to.have.status(200); });"] } }
+          ],
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/drivers/1", "host": ["{{baseUrl}}"], "path": ["api", "drivers", "1"] } },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"id\": 1,\n  \"userId\": 1,\n  \"licenseNumber\": \"DL-2026-00123\",\n  \"licenseExpiry\": \"2028-12-31\",\n  \"status\": \"APPROVED\",\n  \"rating\": 5.0,\n  \"vehicles\": [\n    {\n      \"id\": 1,\n      \"driverId\": 1,\n      \"make\": \"Toyota\",\n      \"model\": \"Prius\",\n      \"year\": 2019,\n      \"plateNumber\": \"WP-CAB-4521\",\n      \"color\": \"Silver\",\n      \"capacity\": 4,\n      \"active\": true,\n      \"createdAt\": \"2026-09-13T15:05:00Z\"\n    }\n  ],\n  \"createdAt\": \"2026-09-13T15:00:00Z\"\n}"
+            },
+            {
+              "name": "404 Not Found",
+              "originalRequest": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/drivers/9999", "host": ["{{baseUrl}}"], "path": ["api", "drivers", "9999"] } },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"timestamp\": \"2026-09-13T15:00:00Z\",\n  \"status\": 404,\n  \"error\": \"Not Found\",\n  \"message\": \"Driver not found with id: 9999\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET Driver by userId",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/drivers/by-user/{{userId}}", "host": ["{{baseUrl}}"], "path": ["api", "drivers", "by-user", "{{userId}}"] },
+            "description": "Looks up the driver profile for a given account-service userId. 404 if that user has no driver profile."
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Update driver",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"licenseNumber\": \"{{licenseNumber}}\",\n  \"licenseExpiry\": \"2029-06-30\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/api/drivers/{{driverId}}", "host": ["{{baseUrl}}"], "path": ["api", "drivers", "{{driverId}}"] },
+            "description": "Updates license details. Both fields are optional - send only what changed. status and rating are not editable here (use the /status endpoint for status)."
+          },
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('status is 200', function () { pm.response.to.have.status(200); });"] } }
+          ],
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"licenseNumber\": \"DL-2026-00123\",\n  \"licenseExpiry\": \"2029-06-30\"\n}" },
+                "url": { "raw": "{{baseUrl}}/api/drivers/1", "host": ["{{baseUrl}}"], "path": ["api", "drivers", "1"] }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"id\": 1,\n  \"userId\": 1,\n  \"licenseNumber\": \"DL-2026-00123\",\n  \"licenseExpiry\": \"2029-06-30\",\n  \"status\": \"PENDING\",\n  \"rating\": 5.0,\n  \"vehicles\": [],\n  \"createdAt\": \"2026-09-13T15:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "PATCH Update driver status (approve/reject/suspend)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"APPROVED\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/api/drivers/{{driverId}}/status", "host": ["{{baseUrl}}"], "path": ["api", "drivers", "{{driverId}}", "status"] },
+            "description": "Transitions the driver's approval state. Valid values: PENDING, APPROVED, REJECTED, SUSPENDED. Models the admin approval step in workflow 2 - only APPROVED drivers are eligible for ride matching in workflow 4."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('driver is APPROVED', function () { pm.expect(pm.response.json().status).to.eql('APPROVED'); });"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"status\": \"APPROVED\"\n}" },
+                "url": { "raw": "{{baseUrl}}/api/drivers/1/status", "host": ["{{baseUrl}}"], "path": ["api", "drivers", "1", "status"] }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"id\": 1,\n  \"userId\": 1,\n  \"licenseNumber\": \"DL-2026-00123\",\n  \"licenseExpiry\": \"2028-12-31\",\n  \"status\": \"APPROVED\",\n  \"rating\": 5.0,\n  \"vehicles\": [],\n  \"createdAt\": \"2026-09-13T15:00:00Z\"\n}"
+            },
+            {
+              "name": "400 Missing status",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{}" },
+                "url": { "raw": "{{baseUrl}}/api/drivers/1/status", "host": ["{{baseUrl}}"], "path": ["api", "drivers", "1", "status"] }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"timestamp\": \"2026-09-13T15:00:00Z\",\n  \"status\": 400,\n  \"error\": \"Bad Request\",\n  \"message\": \"Validation failed\",\n  \"details\": [\"status: must not be null\"]\n}"
+            }
+          ]
+        },
+        {
+          "name": "DELETE Driver",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/api/drivers/{{driverId}}", "host": ["{{baseUrl}}"], "path": ["api", "drivers", "{{driverId}}"] },
+            "description": "Permanently removes the driver profile and (via cascade) all of their vehicles. Returns 204 No Content. Run this last."
+          },
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('status is 204', function () { pm.response.to.have.status(204); });"] } }
+          ],
+          "response": [
+            {
+              "name": "204 No Content",
+              "originalRequest": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/api/drivers/1", "host": ["{{baseUrl}}"], "path": ["api", "drivers", "1"] } },
+              "status": "No Content",
+              "code": 204,
+              "_postman_previewlanguage": "text",
+              "header": [],
+              "body": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Vehicles",
+      "item": [
+        {
+          "name": "POST Create vehicle",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"driverId\": {{driverId}},\n  \"make\": \"Toyota\",\n  \"model\": \"Prius\",\n  \"year\": 2019,\n  \"plateNumber\": \"{{plateNumber}}\",\n  \"color\": \"Silver\",\n  \"capacity\": 4\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/api/vehicles", "host": ["{{baseUrl}}"], "path": ["api", "vehicles"] },
+            "description": "Registers a vehicle under an existing driverId. plateNumber must be unique across all vehicles. capacity defaults to 4 if omitted and must be positive if sent.\n\nReturns 201 Created."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) {",
+                  "    var body = pm.response.json();",
+                  "    pm.collectionVariables.set('vehicleId', body.id);",
+                  "    console.log('Saved vehicleId=' + body.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "201 Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"driverId\": 1,\n  \"make\": \"Toyota\",\n  \"model\": \"Prius\",\n  \"year\": 2019,\n  \"plateNumber\": \"WP-CAB-4521\",\n  \"color\": \"Silver\",\n  \"capacity\": 4\n}" },
+                "url": { "raw": "{{baseUrl}}/api/vehicles", "host": ["{{baseUrl}}"], "path": ["api", "vehicles"] }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"id\": 1,\n  \"driverId\": 1,\n  \"make\": \"Toyota\",\n  \"model\": \"Prius\",\n  \"year\": 2019,\n  \"plateNumber\": \"WP-CAB-4521\",\n  \"color\": \"Silver\",\n  \"capacity\": 4,\n  \"active\": true,\n  \"createdAt\": \"2026-09-13T15:05:00Z\"\n}"
+            },
+            {
+              "name": "404 Driver not found",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"driverId\": 9999,\n  \"make\": \"Toyota\",\n  \"model\": \"Prius\",\n  \"plateNumber\": \"WP-XYZ-0000\"\n}" },
+                "url": { "raw": "{{baseUrl}}/api/vehicles", "host": ["{{baseUrl}}"], "path": ["api", "vehicles"] }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"timestamp\": \"2026-09-13T15:05:00Z\",\n  \"status\": 404,\n  \"error\": \"Not Found\",\n  \"message\": \"Driver not found with id: 9999\"\n}"
+            },
+            {
+              "name": "400 Duplicate plate number",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"driverId\": 1,\n  \"make\": \"Toyota\",\n  \"model\": \"Prius\",\n  \"plateNumber\": \"WP-CAB-4521\"\n}" },
+                "url": { "raw": "{{baseUrl}}/api/vehicles", "host": ["{{baseUrl}}"], "path": ["api", "vehicles"] }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"timestamp\": \"2026-09-13T15:05:00Z\",\n  \"status\": 400,\n  \"error\": \"Bad Request\",\n  \"message\": \"A vehicle with this plate number already exists\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET All vehicles (optionally by driverId)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/vehicles?driverId={{driverId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "vehicles"],
+              "query": [{ "key": "driverId", "value": "{{driverId}}", "description": "Optional filter. Omit to list every vehicle." }]
+            },
+            "description": "Lists vehicles, optionally filtered to one driver's fleet."
+          },
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('status is 200', function () { pm.response.to.have.status(200); });"] } }
+          ],
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/vehicles?driverId=1", "host": ["{{baseUrl}}"], "path": ["api", "vehicles"], "query": [{ "key": "driverId", "value": "1" }] } },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "[\n  {\n    \"id\": 1,\n    \"driverId\": 1,\n    \"make\": \"Toyota\",\n    \"model\": \"Prius\",\n    \"year\": 2019,\n    \"plateNumber\": \"WP-CAB-4521\",\n    \"color\": \"Silver\",\n    \"capacity\": 4,\n    \"active\": true,\n    \"createdAt\": \"2026-09-13T15:05:00Z\"\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "GET Vehicle by id",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/vehicles/{{vehicleId}}", "host": ["{{baseUrl}}"], "path": ["api", "vehicles", "{{vehicleId}}"] },
+            "description": "Returns a single vehicle. 404 if the id does not exist."
+          },
+          "response": [
+            {
+              "name": "404 Not Found",
+              "originalRequest": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/vehicles/9999", "host": ["{{baseUrl}}"], "path": ["api", "vehicles", "9999"] } },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"timestamp\": \"2026-09-13T15:05:00Z\",\n  \"status\": 404,\n  \"error\": \"Not Found\",\n  \"message\": \"Vehicle not found with id: 9999\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "PUT Update vehicle",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"color\": \"White\",\n  \"capacity\": 5\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/api/vehicles/{{vehicleId}}", "host": ["{{baseUrl}}"], "path": ["api", "vehicles", "{{vehicleId}}"] },
+            "description": "Every field is optional - send only what changed. plateNumber and driverId are not editable here."
+          },
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('status is 200', function () { pm.response.to.have.status(200); });"] } }
+          ],
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"color\": \"White\",\n  \"capacity\": 5\n}" },
+                "url": { "raw": "{{baseUrl}}/api/vehicles/1", "host": ["{{baseUrl}}"], "path": ["api", "vehicles", "1"] }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"id\": 1,\n  \"driverId\": 1,\n  \"make\": \"Toyota\",\n  \"model\": \"Prius\",\n  \"year\": 2019,\n  \"plateNumber\": \"WP-CAB-4521\",\n  \"color\": \"White\",\n  \"capacity\": 5,\n  \"active\": true,\n  \"createdAt\": \"2026-09-13T15:05:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "PATCH Deactivate vehicle",
+          "request": {
+            "method": "PATCH",
+            "url": { "raw": "{{baseUrl}}/api/vehicles/{{vehicleId}}/deactivate", "host": ["{{baseUrl}}"], "path": ["api", "vehicles", "{{vehicleId}}", "deactivate"] },
+            "description": "Soft-disables the vehicle (active=false) without deleting the record - e.g. the vehicle failed inspection or is temporarily off the road."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('vehicle is inactive', function () { pm.expect(pm.response.json().active).to.eql(false); });"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": { "method": "PATCH", "url": { "raw": "{{baseUrl}}/api/vehicles/1/deactivate", "host": ["{{baseUrl}}"], "path": ["api", "vehicles", "1", "deactivate"] } },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"id\": 1,\n  \"driverId\": 1,\n  \"make\": \"Toyota\",\n  \"model\": \"Prius\",\n  \"year\": 2019,\n  \"plateNumber\": \"WP-CAB-4521\",\n  \"color\": \"White\",\n  \"capacity\": 5,\n  \"active\": false,\n  \"createdAt\": \"2026-09-13T15:05:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "DELETE Vehicle",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/api/vehicles/{{vehicleId}}", "host": ["{{baseUrl}}"], "path": ["api", "vehicles", "{{vehicleId}}"] },
+            "description": "Permanently removes the vehicle. Returns 204 No Content. Run this before deleting the parent driver."
+          },
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('status is 204', function () { pm.response.to.have.status(204); });"] } }
+          ],
+          "response": [
+            {
+              "name": "204 No Content",
+              "originalRequest": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/api/vehicles/1", "host": ["{{baseUrl}}"], "path": ["api", "vehicles", "1"] } },
+              "status": "No Content",
+              "code": 204,
+              "_postman_previewlanguage": "text",
+              "header": [],
+              "body": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "GET Health",
+      "request": {
+        "auth": { "type": "noauth" },
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/actuator/health", "host": ["{{baseUrl}}"], "path": ["actuator", "health"] },
+        "description": "Public liveness check."
+      },
+      "response": [
+        {
+          "name": "200 OK",
+          "originalRequest": { "method": "GET", "url": { "raw": "{{baseUrl}}/actuator/health", "host": ["{{baseUrl}}"], "path": ["actuator", "health"] } },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"status\": \"UP\"\n}"
+        }
+      ]
+    }
+  ]
+}

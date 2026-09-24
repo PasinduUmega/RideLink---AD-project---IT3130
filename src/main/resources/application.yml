@@ -1,0 +1,40 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: driver-vehicle-service
+  jackson:
+    default-property-inclusion: non_null
+
+jwt:
+  # Must match the secret used by account-service - this service only
+  # validates tokens, it never issues them.
+  secret: ${JWT_SECRET:ridelink-shared-super-secret-key-change-me-in-prod-0123456789}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+logging:
+  level:
+    com.ridelink.drivervehicle: INFO
+
+---
+# Real MongoDB connection - inactive under the "test" profile so tests
+# can fall back to Spring Boot's embedded Mongo auto-configuration,
+# which backs off as soon as the connection is explicitly configured.
+# Set MONGODB_URI to a full connection string (e.g. an Atlas SRV URI with
+# credentials) instead of separate host/port/username/password fields -
+# binding an unset username/password to Mongo's char[] password property
+# throws a NullPointerException in Spring Boot 3.2.
+spring:
+  config:
+    import: optional:file:./mongodb-local.properties
+    activate:
+      on-profile: '!test'
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:27017/ridelink_drivers}
