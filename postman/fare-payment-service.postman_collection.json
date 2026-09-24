@@ -1,0 +1,371 @@
+{
+  "info": {
+    "name": "RideLink - Fare & Payment Service",
+    "description": "Fare calculation, simulated payment and refund endpoints (port 8084).\n\nThis service validates JWTs signed with the shared jwt.secret but does not issue them - paste a token from account-service's Login/Register into {{token}}. Run Calculate Fare -> Process Payment -> Get Payment (receipt) in order; each step auto-saves the id it creates.\n\nFare formula (see fare.base-fare / fare.per-km-rate / fare.currency): totalFare = baseFare + (distanceKm x perKmRate), rounded to 2 decimal places. Defaults: baseFare=2.50, perKmRate=1.20, currency=USD.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{token}}", "type": "string" }
+    ]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8084", "type": "string" },
+    { "key": "token", "value": "", "type": "string", "description": "JWT obtained from account-service's /api/auth/login or /api/auth/register" },
+    { "key": "rideId", "value": "1", "type": "string", "description": "An existing ride-management-service Ride.id, ideally COMPLETED" },
+    { "key": "riderId", "value": "1", "type": "string", "description": "An existing account-service User.id" },
+    { "key": "fareId", "value": "", "type": "string" },
+    { "key": "paymentId", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Fares",
+      "item": [
+        {
+          "name": "POST Calculate fare",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rideId\": {{rideId}},\n  \"riderId\": {{riderId}},\n  \"distanceKm\": 32.5\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/api/fares", "host": ["{{baseUrl}}"], "path": ["api", "fares"] },
+            "description": "Calculates and records the fare for a ride. rideId, riderId and distanceKm (>= 0) are required. Only one fare can ever be calculated per rideId - a second attempt for the same ride is rejected (see the 400 example below).\n\ntotalFare = baseFare + (distanceKm x perKmRate), rounded to 2 dp. New fares start in INVOICED status.\n\nReturns 201 Created."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) {",
+                  "    var body = pm.response.json();",
+                  "    pm.collectionVariables.set('fareId', body.id);",
+                  "    console.log('Saved fareId=' + body.id + ', totalFare=' + body.totalFare);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "201 Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"rideId\": \"77a0b1c2d3e4f5a6b7c8d9e0\",\n  \"riderId\": \"665f0a1b2c3d4e5f6a7b8c9d\",\n  \"distanceKm\": 32.5\n}" },
+                "url": { "raw": "{{baseUrl}}/api/fares", "host": ["{{baseUrl}}"], "path": ["api", "fares"] }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"id\": \"99c2d3e4f5a6b7c8d9e0f1a2\",\n  \"rideId\": \"77a0b1c2d3e4f5a6b7c8d9e0\",\n  \"riderId\": \"665f0a1b2c3d4e5f6a7b8c9d\",\n  \"baseFare\": 2.5,\n  \"distanceKm\": 32.5,\n  \"distanceFare\": 39.0,\n  \"totalFare\": 41.5,\n  \"currency\": \"USD\",\n  \"status\": \"INVOICED\",\n  \"createdAt\": \"2026-09-13T16:40:00Z\"\n}"
+            },
+            {
+              "name": "400 Fare already calculated for this ride",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"rideId\": \"77a0b1c2d3e4f5a6b7c8d9e0\",\n  \"riderId\": \"665f0a1b2c3d4e5f6a7b8c9d\",\n  \"distanceKm\": 32.5\n}" },
+                "url": { "raw": "{{baseUrl}}/api/fares", "host": ["{{baseUrl}}"], "path": ["api", "fares"] }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"timestamp\": \"2026-09-13T16:41:00Z\",\n  \"status\": 400,\n  \"error\": \"Bad Request\",\n  \"message\": \"A fare has already been calculated for rideId: 1\"\n}"
+            },
+            {
+              "name": "400 Validation failed (negative distance)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"rideId\": \"88b1c2d3e4f5a6b7c8d9e0f1\",\n  \"riderId\": \"665f0a1b2c3d4e5f6a7b8c9d\",\n  \"distanceKm\": -5\n}" },
+                "url": { "raw": "{{baseUrl}}/api/fares", "host": ["{{baseUrl}}"], "path": ["api", "fares"] }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"timestamp\": \"2026-09-13T16:41:30Z\",\n  \"status\": 400,\n  \"error\": \"Bad Request\",\n  \"message\": \"Validation failed\",\n  \"details\": [\"distanceKm: must be greater than or equal to 0\"]\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET All fares (optionally by riderId)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/fares?riderId={{riderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "fares"],
+              "query": [{ "key": "riderId", "value": "{{riderId}}", "description": "Optional filter. Omit to list every fare." }]
+            },
+            "description": "Lists fares, optionally filtered to one rider's history."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/fares?riderId=1", "host": ["{{baseUrl}}"], "path": ["api", "fares"], "query": [{ "key": "riderId", "value": "1" }] } },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "[\n  {\n    \"id\": \"99c2d3e4f5a6b7c8d9e0f1a2\",\n    \"rideId\": \"77a0b1c2d3e4f5a6b7c8d9e0\",\n    \"riderId\": \"665f0a1b2c3d4e5f6a7b8c9d\",\n    \"baseFare\": 2.5,\n    \"distanceKm\": 32.5,\n    \"distanceFare\": 39.0,\n    \"totalFare\": 41.5,\n    \"currency\": \"USD\",\n    \"status\": \"INVOICED\",\n    \"createdAt\": \"2026-09-13T16:40:00Z\"\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "GET Fare by id",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/fares/{{fareId}}", "host": ["{{baseUrl}}"], "path": ["api", "fares", "{{fareId}}"] },
+            "description": "Returns a single fare. 404 if the id does not exist."
+          },
+          "response": [
+            {
+              "name": "404 Not Found",
+              "originalRequest": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/fares/000000000000000000000000", "host": ["{{baseUrl}}"], "path": ["api", "fares", "000000000000000000000000"] } },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"timestamp\": \"2026-09-13T16:42:00Z\",\n  \"status\": 404,\n  \"error\": \"Not Found\",\n  \"message\": \"Fare not found with id: 9999\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET Fare by rideId",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/fares/by-ride/{{rideId}}", "host": ["{{baseUrl}}"], "path": ["api", "fares", "by-ride", "{{rideId}}"] },
+            "description": "Looks up the fare already calculated for a given ride-management-service rideId. 404 if no fare exists for that ride yet."
+          },
+          "response": []
+        },
+        {
+          "name": "PATCH Void fare",
+          "request": {
+            "method": "PATCH",
+            "url": { "raw": "{{baseUrl}}/api/fares/{{fareId}}/void", "host": ["{{baseUrl}}"], "path": ["api", "fares", "{{fareId}}", "void"] },
+            "description": "Marks a fare as VOID (e.g. the ride was disputed or cancelled after invoicing) so it can no longer be paid. Returns 204 No Content."
+          },
+          "response": [
+            {
+              "name": "204 No Content",
+              "originalRequest": { "method": "PATCH", "url": { "raw": "{{baseUrl}}/api/fares/88b1c2d3e4f5a6b7c8d9e0f1/void", "host": ["{{baseUrl}}"], "path": ["api", "fares", "88b1c2d3e4f5a6b7c8d9e0f1", "void"] } },
+              "status": "No Content",
+              "code": 204,
+              "_postman_previewlanguage": "text",
+              "header": [],
+              "body": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "POST Process payment",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fareId\": {{fareId}},\n  \"riderId\": {{riderId}},\n  \"method\": \"CARD\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/api/payments", "host": ["{{baseUrl}}"], "path": ["api", "payments"] },
+            "description": "Runs a simulated payment against an existing fare. method is one of CARD, CASH, WALLET. The amount is taken from the fare's totalFare - it is not sent by the client. On success the fare is marked PAID and a transactionId is generated; the current gateway simulation always succeeds (see PaymentService.simulateGateway()) - a failed-gateway response is shown below for reference (this would occur once the simulation is made non-deterministic, or already occurs if the same request path throws PaymentFailedException).\n\nReturns 201 Created."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('payment is COMPLETED', function () { pm.expect(pm.response.json().status).to.eql('COMPLETED'); });",
+                  "if (pm.response.code === 201) {",
+                  "    var body = pm.response.json();",
+                  "    pm.collectionVariables.set('paymentId', body.id);",
+                  "    console.log('Saved paymentId=' + body.id + ', transactionId=' + body.transactionId);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "201 Created (COMPLETED)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"fareId\": \"99c2d3e4f5a6b7c8d9e0f1a2\",\n  \"riderId\": \"665f0a1b2c3d4e5f6a7b8c9d\",\n  \"method\": \"CARD\"\n}" },
+                "url": { "raw": "{{baseUrl}}/api/payments", "host": ["{{baseUrl}}"], "path": ["api", "payments"] }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"id\": \"99c2d3e4f5a6b7c8d9e0f1a2\",\n  \"fareId\": \"99c2d3e4f5a6b7c8d9e0f1a2\",\n  \"riderId\": \"665f0a1b2c3d4e5f6a7b8c9d\",\n  \"method\": \"CARD\",\n  \"status\": \"COMPLETED\",\n  \"amount\": 41.5,\n  \"transactionId\": \"txn_3f6b2b9e-7e2a-4b0e-9f2a-2b6a1d9c5e10\",\n  \"paidAt\": \"2026-09-13T16:45:00Z\",\n  \"createdAt\": \"2026-09-13T16:45:00Z\"\n}"
+            },
+            {
+              "name": "422 Simulated gateway failure",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"fareId\": \"aac3d4e5f6a7b8c9d0e1f2a3\",\n  \"riderId\": \"665f0a1b2c3d4e5f6a7b8c9d\",\n  \"method\": \"CARD\"\n}" },
+                "url": { "raw": "{{baseUrl}}/api/payments", "host": ["{{baseUrl}}"], "path": ["api", "payments"] }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"timestamp\": \"2026-09-13T16:46:00Z\",\n  \"status\": 422,\n  \"error\": \"Unprocessable Entity\",\n  \"message\": \"Payment could not be processed. Please try again.\"\n}"
+            },
+            {
+              "name": "400 Fare already paid",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"fareId\": \"99c2d3e4f5a6b7c8d9e0f1a2\",\n  \"riderId\": \"665f0a1b2c3d4e5f6a7b8c9d\",\n  \"method\": \"CARD\"\n}" },
+                "url": { "raw": "{{baseUrl}}/api/payments", "host": ["{{baseUrl}}"], "path": ["api", "payments"] }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"timestamp\": \"2026-09-13T16:47:00Z\",\n  \"status\": 400,\n  \"error\": \"Bad Request\",\n  \"message\": \"This fare has already been paid\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET All payments (filter by rider/fare)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/payments?riderId={{riderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments"],
+              "query": [
+                { "key": "riderId", "value": "{{riderId}}" },
+                { "key": "fareId", "value": "{{fareId}}", "disabled": true }
+              ]
+            },
+            "description": "Lists payments. riderId takes precedence over fareId if both are enabled; omit both to list every payment."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/payments?riderId=1", "host": ["{{baseUrl}}"], "path": ["api", "payments"], "query": [{ "key": "riderId", "value": "1" }] } },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "[\n  {\n    \"id\": \"99c2d3e4f5a6b7c8d9e0f1a2\",\n    \"fareId\": \"99c2d3e4f5a6b7c8d9e0f1a2\",\n    \"riderId\": \"665f0a1b2c3d4e5f6a7b8c9d\",\n    \"method\": \"CARD\",\n    \"status\": \"COMPLETED\",\n    \"amount\": 41.5,\n    \"transactionId\": \"txn_3f6b2b9e-7e2a-4b0e-9f2a-2b6a1d9c5e10\",\n    \"paidAt\": \"2026-09-13T16:45:00Z\",\n    \"createdAt\": \"2026-09-13T16:45:00Z\"\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "GET Payment by id (receipt)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/payments/{{paymentId}}", "host": ["{{baseUrl}}"], "path": ["api", "payments", "{{paymentId}}"] },
+            "description": "Returns a single payment record - this is the receipt referenced in workflow 6. 404 if the id does not exist."
+          },
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('status is 200', function () { pm.response.to.have.status(200); });"] } }
+          ],
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/payments/aab3d4e5f6a7b8c9d0e1f2a3", "host": ["{{baseUrl}}"], "path": ["api", "payments", "aab3d4e5f6a7b8c9d0e1f2a3"] } },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"id\": \"99c2d3e4f5a6b7c8d9e0f1a2\",\n  \"fareId\": \"99c2d3e4f5a6b7c8d9e0f1a2\",\n  \"riderId\": \"665f0a1b2c3d4e5f6a7b8c9d\",\n  \"method\": \"CARD\",\n  \"status\": \"COMPLETED\",\n  \"amount\": 41.5,\n  \"transactionId\": \"txn_3f6b2b9e-7e2a-4b0e-9f2a-2b6a1d9c5e10\",\n  \"paidAt\": \"2026-09-13T16:45:00Z\",\n  \"createdAt\": \"2026-09-13T16:45:00Z\"\n}"
+            },
+            {
+              "name": "404 Not Found",
+              "originalRequest": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/payments/000000000000000000000000", "host": ["{{baseUrl}}"], "path": ["api", "payments", "000000000000000000000000"] } },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"timestamp\": \"2026-09-13T16:48:00Z\",\n  \"status\": 404,\n  \"error\": \"Not Found\",\n  \"message\": \"Payment not found with id: 9999\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "POST Refund payment",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/payments/{{paymentId}}/refund", "host": ["{{baseUrl}}"], "path": ["api", "payments", "{{paymentId}}", "refund"] },
+            "description": "Refunds a COMPLETED payment, moving it to REFUNDED. Refunding anything else (PENDING, FAILED, or an already-REFUNDED payment) is rejected."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('payment is REFUNDED', function () { pm.expect(pm.response.json().status).to.eql('REFUNDED'); });"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": { "method": "POST", "url": { "raw": "{{baseUrl}}/api/payments/aab3d4e5f6a7b8c9d0e1f2a3/refund", "host": ["{{baseUrl}}"], "path": ["api", "payments", "aab3d4e5f6a7b8c9d0e1f2a3", "refund"] } },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"id\": \"99c2d3e4f5a6b7c8d9e0f1a2\",\n  \"fareId\": \"99c2d3e4f5a6b7c8d9e0f1a2\",\n  \"riderId\": \"665f0a1b2c3d4e5f6a7b8c9d\",\n  \"method\": \"CARD\",\n  \"status\": \"REFUNDED\",\n  \"amount\": 41.5,\n  \"transactionId\": \"txn_3f6b2b9e-7e2a-4b0e-9f2a-2b6a1d9c5e10\",\n  \"paidAt\": \"2026-09-13T16:45:00Z\",\n  \"createdAt\": \"2026-09-13T16:45:00Z\"\n}"
+            },
+            {
+              "name": "400 Only completed payments can be refunded",
+              "originalRequest": { "method": "POST", "url": { "raw": "{{baseUrl}}/api/payments/bbc4e5f6a7b8c9d0e1f2a3b4/refund", "host": ["{{baseUrl}}"], "path": ["api", "payments", "bbc4e5f6a7b8c9d0e1f2a3b4", "refund"] } },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"timestamp\": \"2026-09-13T16:49:00Z\",\n  \"status\": 400,\n  \"error\": \"Bad Request\",\n  \"message\": \"Only completed payments can be refunded\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "GET Health",
+      "request": {
+        "auth": { "type": "noauth" },
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/actuator/health", "host": ["{{baseUrl}}"], "path": ["actuator", "health"] },
+        "description": "Public liveness check."
+      },
+      "response": [
+        {
+          "name": "200 OK",
+          "originalRequest": { "method": "GET", "url": { "raw": "{{baseUrl}}/actuator/health", "host": ["{{baseUrl}}"], "path": ["actuator", "health"] } },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"status\": \"UP\"\n}"
+        }
+      ]
+    }
+  ]
+}
