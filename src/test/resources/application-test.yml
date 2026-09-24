@@ -1,0 +1,17 @@
+spring:
+  data:
+    mongodb:
+      database: ridelink_payments_test
+
+de:
+  flapdoodle:
+    mongodb:
+      embedded:
+        version: 6.0.9
+
+jwt:
+  secret: test-secret-key-for-unit-tests-only-not-for-prod-0123456789
+fare:
+  base-fare: 2.50
+  per-km-rate: 1.20
+  currency: USD
