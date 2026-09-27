@@ -18,6 +18,10 @@ public class FareResponse {
     private Double baseFare;
     private Double distanceKm;
     private Double distanceFare;
+    private Integer durationMinutes;
+    private Double timeFare;
+    private Double subtotal;
+    private boolean minimumFareApplied;
     private Double totalFare;
     private String currency;
     private FareStatus status;
@@ -31,6 +35,10 @@ public class FareResponse {
                 .baseFare(f.getBaseFare())
                 .distanceKm(f.getDistanceKm())
                 .distanceFare(f.getDistanceFare())
+                .durationMinutes(f.getDurationMinutes())
+                .timeFare(f.getTimeFare())
+                .subtotal(f.getSubtotal())
+                .minimumFareApplied(f.isMinimumFareApplied())
                 .totalFare(f.getTotalFare())
                 .currency(f.getCurrency())
                 .status(f.getStatus())

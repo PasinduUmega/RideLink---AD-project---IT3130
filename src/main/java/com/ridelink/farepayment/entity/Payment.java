@@ -23,6 +23,9 @@ public class Payment {
 
     private String riderId;
 
+    @Indexed
+    private String rideId;
+
     private PaymentMethod method;
 
     @Builder.Default
@@ -31,6 +34,10 @@ public class Payment {
     private Double amount;
 
     private String transactionId;
+
+    private String failureReason;
+
+    private Instant refundedAt;
 
     private Instant paidAt;
 

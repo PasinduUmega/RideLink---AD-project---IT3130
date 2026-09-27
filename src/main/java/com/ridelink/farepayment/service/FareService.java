@@ -1,13 +1,14 @@
 package com.ridelink.farepayment.service;
 
 import com.ridelink.farepayment.dto.CalculateFareRequest;
+import com.ridelink.farepayment.dto.EstimateFareRequest;
+import com.ridelink.farepayment.dto.FareEstimateResponse;
 import com.ridelink.farepayment.dto.FareResponse;
 import com.ridelink.farepayment.entity.Fare;
 import com.ridelink.farepayment.entity.FareStatus;
 import com.ridelink.farepayment.exception.BadRequestException;
 import com.ridelink.farepayment.exception.ResourceNotFoundException;
 import com.ridelink.farepayment.repository.FareRepository;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -17,18 +18,16 @@ import java.util.List;
 public class FareService {
 
     private final FareRepository fareRepository;
-    private final double baseFare;
-    private final double perKmRate;
-    private final String currency;
+    private final FareCalculator fareCalculator;
 
-    public FareService(FareRepository fareRepository,
-                        @Value("${fare.base-fare}") double baseFare,
-                        @Value("${fare.per-km-rate}") double perKmRate,
-                        @Value("${fare.currency}") String currency) {
+    public FareService(FareRepository fareRepository, FareCalculator fareCalculator) {
         this.fareRepository = fareRepository;
-        this.baseFare = baseFare;
-        this.perKmRate = perKmRate;
-        this.currency = currency;
+        this.fareCalculator = fareCalculator;
+    }
+
+    /** Quote before/at ride request time - nothing is persisted. */
+    public FareEstimateResponse estimate(EstimateFareRequest req) {
+        return FareEstimateResponse.from(fareCalculator.calculate(req.getDistanceKm(), req.getDurationMinutes()));
     }
 
     public FareResponse calculate(CalculateFareRequest req) {
@@ -36,18 +35,21 @@ public class FareService {
             throw new BadRequestException("A fare has already been calculated for rideId: " + req.getRideId());
         }
 
-        double distanceFare = round(req.getDistanceKm() * perKmRate);
-        double total = round(baseFare + distanceFare);
+        FareCalculator.Breakdown b = fareCalculator.calculate(req.getDistanceKm(), req.getDurationMinutes());
 
         Instant now = Instant.now();
         Fare fare = Fare.builder()
                 .rideId(req.getRideId())
                 .riderId(req.getRiderId())
-                .baseFare(baseFare)
-                .distanceKm(req.getDistanceKm())
-                .distanceFare(distanceFare)
-                .totalFare(total)
-                .currency(currency)
+                .baseFare(b.baseFare())
+                .distanceKm(b.distanceKm())
+                .distanceFare(b.distanceFare())
+                .durationMinutes(b.durationMinutes())
+                .timeFare(b.timeFare())
+                .subtotal(b.subtotal())
+                .minimumFareApplied(b.minimumFareApplied())
+                .totalFare(b.totalFare())
+                .currency(b.currency())
                 .status(FareStatus.INVOICED)
                 .createdAt(now)
                 .updatedAt(now)
@@ -91,9 +93,5 @@ public class FareService {
     Fare findOr404(String id) {
         return fareRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Fare not found with id: " + id));
-    }
-
-    private double round(double value) {
-        return Math.round(value * 100.0) / 100.0;
     }
 }

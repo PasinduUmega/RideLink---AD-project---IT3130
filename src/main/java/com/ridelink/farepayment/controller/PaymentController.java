@@ -1,7 +1,9 @@
 package com.ridelink.farepayment.controller;
 
 import com.ridelink.farepayment.dto.PaymentResponse;
+import com.ridelink.farepayment.dto.PaymentStatusResponse;
 import com.ridelink.farepayment.dto.ProcessPaymentRequest;
+import com.ridelink.farepayment.dto.ReceiptResponse;
 import com.ridelink.farepayment.service.PaymentService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -28,16 +30,28 @@ public class PaymentController {
     @GetMapping
     public ResponseEntity<List<PaymentResponse>> getAll(
             @RequestParam(required = false) String riderId,
-            @RequestParam(required = false) String fareId) {
+            @RequestParam(required = false) String fareId,
+            @RequestParam(required = false) String rideId) {
 
         if (riderId != null) return ResponseEntity.ok(paymentService.getByRiderId(riderId));
         if (fareId != null) return ResponseEntity.ok(paymentService.getByFareId(fareId));
+        if (rideId != null) return ResponseEntity.ok(paymentService.getByRideId(rideId));
         return ResponseEntity.ok(paymentService.getAll());
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<PaymentResponse> getById(@PathVariable String id) {
         return ResponseEntity.ok(paymentService.getById(id));
+    }
+
+    @GetMapping("/{id}/status")
+    public ResponseEntity<PaymentStatusResponse> getStatus(@PathVariable String id) {
+        return ResponseEntity.ok(paymentService.getStatus(id));
+    }
+
+    @GetMapping("/{id}/receipt")
+    public ResponseEntity<ReceiptResponse> getReceipt(@PathVariable String id) {
+        return ResponseEntity.ok(paymentService.getReceipt(id));
     }
 
     @PostMapping("/{id}/refund")

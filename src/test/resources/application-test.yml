@@ -15,3 +15,6 @@ fare:
   base-fare: 2.50
   per-km-rate: 1.20
   currency: USD
+  per-minute-rate: 0.20
+  minimum-fare: 5.00
+  average-speed-kmh: 30
