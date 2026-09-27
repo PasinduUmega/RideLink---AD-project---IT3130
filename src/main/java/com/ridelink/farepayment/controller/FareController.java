@@ -1,6 +1,8 @@
 package com.ridelink.farepayment.controller;
 
 import com.ridelink.farepayment.dto.CalculateFareRequest;
+import com.ridelink.farepayment.dto.EstimateFareRequest;
+import com.ridelink.farepayment.dto.FareEstimateResponse;
 import com.ridelink.farepayment.dto.FareResponse;
 import com.ridelink.farepayment.service.FareService;
 import jakarta.validation.Valid;
@@ -23,6 +25,11 @@ public class FareController {
     @PostMapping
     public ResponseEntity<FareResponse> calculate(@Valid @RequestBody CalculateFareRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(fareService.calculate(request));
+    }
+
+    @PostMapping("/estimate")
+    public ResponseEntity<FareEstimateResponse> estimate(@Valid @RequestBody EstimateFareRequest request) {
+        return ResponseEntity.ok(fareService.estimate(request));
     }
 
     @GetMapping

@@ -18,4 +18,7 @@ public class ProcessPaymentRequest {
 
     @NotNull
     private PaymentMethod method;
+
+    /** Demo hook for the simulated gateway: true forces a declined (FAILED) payment. */
+    private boolean simulateFailure;
 }

@@ -19,4 +19,8 @@ public class CalculateFareRequest {
     @NotNull
     @PositiveOrZero
     private Double distanceKm;
+
+    /** Optional - actual trip duration; estimated from distance when omitted. */
+    @PositiveOrZero
+    private Integer durationMinutes;
 }

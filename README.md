@@ -26,6 +26,9 @@ Tests use an embedded in-memory MongoDB automatically — no external database n
 | `JWT_SECRET` | (dev default) | Must match account-service |
 | `FARE_BASE` | `2.50` | Base fare |
 | `FARE_PER_KM` | `1.20` | Per-kilometer rate |
+| `FARE_PER_MINUTE` | `0.20` | Per-minute rate |
+| `FARE_MINIMUM` | `5.00` | Minimum fare |
+| `FARE_AVG_SPEED_KMH` | `30` | Used to estimate duration when it is not supplied |
 | `FARE_CURRENCY` | `USD` | Currency code |
 
 ## API

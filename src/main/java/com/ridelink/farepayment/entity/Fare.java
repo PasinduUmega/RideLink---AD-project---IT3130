@@ -31,6 +31,14 @@ public class Fare {
 
     private Double distanceFare;
 
+    private Integer durationMinutes;
+
+    private Double timeFare;
+
+    private Double subtotal;
+
+    private boolean minimumFareApplied;
+
     private Double totalFare;
 
     @Builder.Default
