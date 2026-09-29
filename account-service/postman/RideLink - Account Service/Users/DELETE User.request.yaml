@@ -1,0 +1,16 @@
+$kind: http-request
+description: |-
+  Permanently removes the user. Returns 204 No Content with an empty body.
+
+  Run this last - it deletes the user the other requests depend on.
+url: "{{baseUrl}}/api/users/{{userId}}"
+method: DELETE
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('status is 204', function () {
+          pm.response.to.have.status(204);
+      });
+    language: text/javascript
+examples: ./.resources/DELETE User.resources/examples
+order: 5000

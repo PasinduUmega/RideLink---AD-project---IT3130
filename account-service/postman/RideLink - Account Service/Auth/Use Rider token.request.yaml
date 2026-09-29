@@ -1,0 +1,29 @@
+$kind: http-request
+description: Makes the saved {{riderToken}} the active Bearer token, so the Users requests run as that rider.
+url: "{{baseUrl}}/actuator/health"
+method: GET
+auth:
+  type: noauth
+scripts:
+  - type: beforeRequest
+    code: |-
+      // Save to the active environment AND the collection, so the value is never
+      // shadowed by an empty environment variable of the same name.
+      function save(key, value) {
+          pm.collectionVariables.set(key, value);
+          if (pm.environment.name) { pm.environment.set(key, value); }
+      }
+
+      var t = pm.variables.get('riderToken');
+      if (!t) { throw new Error('No riderToken saved yet - run POST Register Rider first'); }
+      save('token', t);
+      save('userId', pm.variables.get('riderId'));
+      console.log('Active token is now the rider token');
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('token switched', function () {
+          pm.expect(pm.variables.get('token')).to.be.a('string').and.not.empty;
+      });
+    language: text/javascript
+order: 5000

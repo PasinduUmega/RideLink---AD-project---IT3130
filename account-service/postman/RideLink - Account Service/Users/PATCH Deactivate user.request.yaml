@@ -1,0 +1,17 @@
+$kind: http-request
+description: Soft-disables the account by setting active to false. The user row is kept.
+url: "{{baseUrl}}/api/users/{{userId}}/deactivate"
+method: PATCH
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('status is 200', function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test('user is inactive', function () {
+          pm.expect(pm.response.json().active).to.eql(false);
+      });
+    language: text/javascript
+examples: ./.resources/PATCH Deactivate user.resources/examples
+order: 4000

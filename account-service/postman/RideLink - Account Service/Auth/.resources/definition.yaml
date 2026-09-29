@@ -1,0 +1,3 @@
+$kind: collection
+description: "Each Register request creates a new user with its own JWT. Tokens are saved separately (riderToken, driverToken, adminToken) and the latest one becomes {{token}}, which the collection sends as 'Authorization: Bearer {{token}}'. Use the 'Use ... token' requests to switch users."
+order: 1000
