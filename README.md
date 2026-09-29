@@ -221,3 +221,4 @@ If `distanceKm` is provided, an `estimatedFare` is calculated with a simple flat
 
 - On `complete`, this service currently only recalculates its own `estimatedFare`. A production build would call `fare-payment-service`'s `POST /api/fares` (see `services.fare-payment.base-url`) to create the authoritative fare record — wire that up in `RideService.complete()`.
 - Driver eligibility (must be `APPROVED` in driver-vehicle-service) isn't checked before `accept` — add a call to driver-vehicle-service or an event-driven check.
+- IT24102952
