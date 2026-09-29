@@ -1,6 +1,8 @@
 spring:
   data:
     mongodb:
+      database: ridelink_payments_test
+      database: ridelink_drivers_test
       database: ridelink_rides_test
 
 de:
@@ -11,6 +13,13 @@ de:
 
 jwt:
   secret: test-secret-key-for-unit-tests-only-not-for-prod-0123456789
+fare:
+  base-fare: 2.50
+  per-km-rate: 1.20
+  currency: USD
+  per-minute-rate: 0.20
+  minimum-fare: 5.00
+  average-speed-kmh: 30
 services:
   fare-payment:
     base-url: http://localhost:8084
