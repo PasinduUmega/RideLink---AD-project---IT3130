@@ -16,6 +16,10 @@
     <version>1.0.0</version>
     <name>fare-payment-service</name>
     <description>RideLink - Fare Calculation &amp; Payment Service</description>
+    <artifactId>driver-vehicle-service</artifactId>
+    <version>1.0.0</version>
+    <name>driver-vehicle-service</name>
+    <description>RideLink - Driver &amp; Vehicle Management Service</description>
 
     <properties>
         <java.version>17</java.version>
