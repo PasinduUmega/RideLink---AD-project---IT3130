@@ -33,6 +33,17 @@ public class DriverController {
         return ResponseEntity.ok(driverService.getAll());
     }
 
+    /** Eligible drivers for matching: APPROVED, AVAILABLE, with a suitable active vehicle. */
+    @GetMapping("/available")
+    public ResponseEntity<List<DriverResponse>> getAvailable(
+            @RequestParam(required = false) String serviceArea,
+            @RequestParam(required = false) Double lat,
+            @RequestParam(required = false) Double lng,
+            @RequestParam(required = false) Double radiusKm,
+            @RequestParam(required = false) Integer minCapacity) {
+        return ResponseEntity.ok(driverService.findAvailable(serviceArea, lat, lng, radiusKm, minCapacity));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<DriverResponse> getById(@PathVariable String id) {
         return ResponseEntity.ok(driverService.getById(id));
@@ -51,6 +62,23 @@ public class DriverController {
     @PatchMapping("/{id}/status")
     public ResponseEntity<DriverResponse> updateStatus(@PathVariable String id, @Valid @RequestBody UpdateDriverStatusRequest request) {
         return ResponseEntity.ok(driverService.updateStatus(id, request));
+    }
+
+    @PatchMapping("/{id}/availability")
+    public ResponseEntity<DriverResponse> updateAvailability(@PathVariable String id,
+                                                             @Valid @RequestBody UpdateAvailabilityRequest request) {
+        return ResponseEntity.ok(driverService.updateAvailability(id, request));
+    }
+
+    @PutMapping("/{id}/location")
+    public ResponseEntity<DriverResponse> updateLocation(@PathVariable String id,
+                                                         @Valid @RequestBody UpdateLocationRequest request) {
+        return ResponseEntity.ok(driverService.updateLocation(id, request));
+    }
+
+    @PostMapping("/{id}/location/simulate")
+    public ResponseEntity<DriverResponse> simulateLocation(@PathVariable String id) {
+        return ResponseEntity.ok(driverService.simulateLocation(id));
     }
 
     @DeleteMapping("/{id}")

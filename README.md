@@ -14,17 +14,15 @@ Manages driver profiles (license, approval status) and their vehicles.
 mvn spring-boot:run
 ```
 
-Uses `MONGODB_URI` for the MongoDB connection (defaults to `mongodb://localhost:27017/ridelink_drivers`).
-For local development, run from this directory to load the optional, git-ignored
-`mongodb-local.properties` file containing `MONGODB_URI=<connection string>`.
-The `MONGODB_URI` environment variable overrides that local file.
+Requires a MongoDB instance reachable at `DB_HOST:DB_PORT` (defaults to `localhost:27017`).
 Tests use an embedded in-memory MongoDB automatically — no external database needed to run `mvn test`.
 
 ## Environment variables
 
 | Variable | Default | Description |
 |---|---|---|
-| `MONGODB_URI` | `mongodb://localhost:27017/ridelink_drivers` | Full MongoDB connection URI including credentials and database name |
+| `DB_HOST` / `DB_PORT` / `DB_NAME` | see `application.yml` | MongoDB connection |
+| `DB_USERNAME` / `DB_PASSWORD` / `DB_AUTH_DATABASE` | (blank) / (blank) / `admin` | MongoDB credentials, if the instance requires auth |
 | `JWT_SECRET` | (dev default) | Must match account-service |
 
 ## API

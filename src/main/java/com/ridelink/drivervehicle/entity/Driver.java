@@ -36,6 +36,18 @@ public class Driver {
     @Builder.Default
     private Double rating = 5.0;
 
+    @Builder.Default
+    private AvailabilityStatus availability = AvailabilityStatus.OFFLINE;
+
+    /** City / zone the driver operates in, e.g. "Colombo". Matched case-insensitively. */
+    @Indexed
+    private String serviceArea;
+
+    /** Simulated current location (no real GPS feed). */
+    private Double currentLat;
+    private Double currentLng;
+    private Instant locationUpdatedAt;
+
     private Instant createdAt;
 
     private Instant updatedAt;

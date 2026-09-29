@@ -1,5 +1,6 @@
 package com.ridelink.drivervehicle.dto;
 
+import com.ridelink.drivervehicle.entity.AvailabilityStatus;
 import com.ridelink.drivervehicle.entity.Driver;
 import com.ridelink.drivervehicle.entity.DriverStatus;
 import lombok.AllArgsConstructor;
@@ -20,6 +21,13 @@ public class DriverResponse {
     private LocalDate licenseExpiry;
     private DriverStatus status;
     private Double rating;
+    private AvailabilityStatus availability;
+    private String serviceArea;
+    private Double currentLat;
+    private Double currentLng;
+    private Instant locationUpdatedAt;
+    /** Distance from the requested pickup point - only set by the available-drivers lookup. */
+    private Double distanceKm;
     private List<VehicleResponse> vehicles;
     private Instant createdAt;
 
@@ -35,8 +43,19 @@ public class DriverResponse {
                 .licenseExpiry(d.getLicenseExpiry())
                 .status(d.getStatus())
                 .rating(d.getRating())
+                .availability(d.getAvailability() != null ? d.getAvailability() : AvailabilityStatus.OFFLINE)
+                .serviceArea(d.getServiceArea())
+                .currentLat(d.getCurrentLat())
+                .currentLng(d.getCurrentLng())
+                .locationUpdatedAt(d.getLocationUpdatedAt())
                 .vehicles(vehicles)
                 .createdAt(d.getCreatedAt())
                 .build();
+    }
+
+    public static DriverResponse from(Driver d, List<VehicleResponse> vehicles, Double distanceKm) {
+        DriverResponse response = from(d, vehicles);
+        response.distanceKm = distanceKm;
+        return response;
     }
 }

@@ -19,4 +19,7 @@ public class CreateDriverRequest {
 
     @Future
     private LocalDate licenseExpiry;
+
+    /** City / zone the driver operates in, e.g. "Colombo". */
+    private String serviceArea;
 }

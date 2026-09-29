@@ -32,7 +32,6 @@ logging:
 # throws a NullPointerException in Spring Boot 3.2.
 spring:
   config:
-    import: optional:file:./mongodb-local.properties
     activate:
       on-profile: '!test'
   data:

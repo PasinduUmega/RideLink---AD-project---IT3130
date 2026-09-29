@@ -1,5 +1,6 @@
 package com.ridelink.drivervehicle.repository;
 
+import com.ridelink.drivervehicle.entity.AvailabilityStatus;
 import com.ridelink.drivervehicle.entity.Driver;
 import com.ridelink.drivervehicle.entity.DriverStatus;
 import org.springframework.data.mongodb.repository.MongoRepository;
@@ -11,4 +12,5 @@ public interface DriverRepository extends MongoRepository<Driver, String> {
     Optional<Driver> findByUserId(String userId);
     boolean existsByLicenseNumber(String licenseNumber);
     List<Driver> findByStatus(DriverStatus status);
+    List<Driver> findByStatusAndAvailability(DriverStatus status, AvailabilityStatus availability);
 }

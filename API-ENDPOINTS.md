@@ -9,7 +9,7 @@ Auth: JWT (`Authorization: Bearer <token>`) — this service **validates only**;
 | 2 | GET | `/api/drivers` | Bearer | List drivers (optionally filter by `status`) |
 | 3 | GET | `/api/drivers/{id}` | Bearer | Get one driver (with their vehicles) |
 | 4 | GET | `/api/drivers/by-user/{userId}` | Bearer | Look up a driver profile by account-service `userId` |
-| 5 | PUT | `/api/drivers/{id}` | Bearer | Update license details |
+| 5 | PUT | `/api/drivers/{id}` | Bearer | Update license details / service area |
 | 6 | PATCH | `/api/drivers/{id}/status` | Bearer | Approve / reject / suspend a driver |
 | 7 | DELETE | `/api/drivers/{id}` | Bearer | Remove a driver (cascades to their vehicles) |
 | 8 | POST | `/api/vehicles` | Bearer | Register a vehicle under a driver |
@@ -18,7 +18,11 @@ Auth: JWT (`Authorization: Bearer <token>`) — this service **validates only**;
 | 11 | PUT | `/api/vehicles/{id}` | Bearer | Update vehicle details |
 | 12 | PATCH | `/api/vehicles/{id}/deactivate` | Bearer | Soft-disable a vehicle |
 | 13 | DELETE | `/api/vehicles/{id}` | Bearer | Remove a vehicle |
-| 14 | GET | `/actuator/health` | Public | Liveness check |
+| 14 | GET | `/api/drivers/available` | Bearer | Eligible available drivers (area / radius / seats) |
+| 15 | PATCH | `/api/drivers/{id}/availability` | Bearer | Set OFFLINE / AVAILABLE / ON_TRIP |
+| 16 | PUT | `/api/drivers/{id}/location` | Bearer | Set current location |
+| 17 | POST | `/api/drivers/{id}/location/simulate` | Bearer | Simulate movement (random step <= 1 km) |
+| 18 | GET | `/actuator/health` | Public | Liveness check |
 
 ---
 
@@ -162,3 +166,46 @@ No body. Sets `active: false`.
 ### Notes
 - Every `/api/drivers/**` and `/api/vehicles/**` request requires the shared JWT — obtain it from `account-service`, not this service.
 - See the [Postman collection](postman/driver-vehicle-service.postman_collection.json) for a runnable end-to-end sequence.
+
+---
+
+## Availability, service area & simulated location
+
+Drivers now carry an operational **availability** separate from their approval `status`:
+`OFFLINE` (default) | `AVAILABLE` | `ON_TRIP`. They also have a `serviceArea` (e.g. `"Colombo"`, set on create/update)
+and a simulated current location (`currentLat`, `currentLng`, `locationUpdatedAt`).
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| PATCH | `/api/drivers/{id}/availability` | Set `OFFLINE` / `AVAILABLE` / `ON_TRIP` |
+| PUT | `/api/drivers/{id}/location` | Set current location manually (`lat`, `lng`) |
+| POST | `/api/drivers/{id}/location/simulate` | Move driver to a random point within 1 km (no body) |
+| GET | `/api/drivers/available` | Eligible drivers for a ride |
+
+### Rules
+- Going `AVAILABLE` requires `status = APPROVED` **and** at least one active vehicle, otherwise `400`.
+- Changing `status` to anything other than `APPROVED` forces availability to `OFFLINE`.
+- `ON_TRIP` is normally set by ride-management-service when a driver is assigned, and reset to `AVAILABLE` when the ride completes or is cancelled.
+- Simulation starts from the driver's current location, or from the centre of their service area if they have none
+  (known areas: Colombo, Kandy, Galle, Negombo, Jaffna, Kurunegala, Matara). Unknown area with no location -> `400`.
+
+### `PATCH /api/drivers/{id}/availability`
+```json
+{ "availability": "AVAILABLE" }
+```
+
+### `PUT /api/drivers/{id}/location`
+```json
+{ "lat": 6.9271, "lng": 79.8612 }
+```
+
+### `GET /api/drivers/available?serviceArea=Colombo&lat=6.93&lng=79.85&radiusKm=10&minCapacity=3`
+
+All parameters optional. A driver is **eligible** when:
+1. `status = APPROVED` and `availability = AVAILABLE`,
+2. they own an active vehicle with `capacity >= minCapacity` (default 1),
+3. `serviceArea` matches (case-insensitive) if given,
+4. if `lat`/`lng` are given: they have a location within `radiusKm` (default 10 km, haversine distance).
+
+With a pickup point the list is sorted nearest-first and each entry includes `distanceKm`.
+Passing only one of `lat`/`lng` -> `400`.

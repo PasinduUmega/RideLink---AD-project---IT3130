@@ -13,4 +13,6 @@ public class UpdateDriverRequest {
 
     @Future
     private LocalDate licenseExpiry;
+
+    private String serviceArea;
 }
