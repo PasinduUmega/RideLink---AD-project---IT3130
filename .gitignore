@@ -1,0 +1,9 @@
+mongodb-local.properties
+
+target/
+.idea/
+.vscode/
+.idea/
+target/
+*.iml
+*.class
