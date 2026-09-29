@@ -12,6 +12,10 @@
     </parent>
 
     <groupId>com.ridelink</groupId>
+    <artifactId>fare-payment-service</artifactId>
+    <version>1.0.0</version>
+    <name>fare-payment-service</name>
+    <description>RideLink - Fare Calculation &amp; Payment Service</description>
     <artifactId>driver-vehicle-service</artifactId>
     <version>1.0.0</version>
     <name>driver-vehicle-service</name>
