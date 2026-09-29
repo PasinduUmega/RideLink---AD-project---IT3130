@@ -1,0 +1,16 @@
+spring:
+  data:
+    mongodb:
+      database: ridelink_rides_test
+
+de:
+  flapdoodle:
+    mongodb:
+      embedded:
+        version: 6.0.9
+
+jwt:
+  secret: test-secret-key-for-unit-tests-only-not-for-prod-0123456789
+services:
+  fare-payment:
+    base-url: http://localhost:8084

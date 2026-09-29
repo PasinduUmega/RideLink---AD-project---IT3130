@@ -1,0 +1,42 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: ride-management-service
+  jackson:
+    default-property-inclusion: non_null
+
+jwt:
+  secret: ${JWT_SECRET:ridelink-shared-super-secret-key-change-me-in-prod-0123456789}
+
+# Base URL of fare-payment-service, used when a ride completes to trigger fare calculation.
+services:
+  fare-payment:
+    base-url: ${FARE_SERVICE_URL:http://localhost:8084}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+logging:
+  level:
+    com.ridelink.ridemanagement: INFO
+
+---
+# Real MongoDB connection - inactive under the "test" profile so tests
+# can fall back to Spring Boot's embedded Mongo auto-configuration,
+# which backs off as soon as the connection is explicitly configured.
+# Set MONGODB_URI to a full connection string (e.g. an Atlas SRV URI with
+# credentials) instead of separate host/port/username/password fields -
+# binding an unset username/password to Mongo's char[] password property
+# throws a NullPointerException in Spring Boot 3.2.
+spring:
+  config:
+    activate:
+      on-profile: '!test'
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:27017/ridelink_rides}
