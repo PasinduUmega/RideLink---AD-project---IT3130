@@ -4,6 +4,7 @@ import com.ridelink.account.dto.AuthResponse;
 import com.ridelink.account.dto.LoginRequest;
 import com.ridelink.account.dto.RegisterRequest;
 import com.ridelink.account.dto.UserResponse;
+import com.ridelink.account.entity.AccountStatus;
 import com.ridelink.account.entity.Role;
 import com.ridelink.account.entity.User;
 import com.ridelink.account.exception.BadRequestException;
@@ -62,7 +63,10 @@ public class AuthService {
             throw new UnauthorizedException("Invalid email or password");
         }
 
-        if (!user.isActive()) {
+        if (user.getStatus() == AccountStatus.SUSPENDED) {
+            throw new UnauthorizedException("Account is suspended");
+        }
+        if (user.getStatus() == AccountStatus.DEACTIVATED) {
             throw new UnauthorizedException("Account is deactivated");
         }
 

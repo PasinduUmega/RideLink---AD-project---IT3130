@@ -7,12 +7,18 @@ Auth: JWT (`Authorization: Bearer <token>`) — issued by this service; all four
 |---|--------|------|------|---------|
 | 1 | POST | `/api/auth/register` | Public | Create a user (rider/driver/admin) and receive a JWT |
 | 2 | POST | `/api/auth/login` | Public | Exchange email + password for a JWT |
-| 3 | GET | `/api/users` | Bearer | List all users |
+| 3 | GET | `/api/users` | Bearer | List users (optional `role`, `status` filters) |
 | 4 | GET | `/api/users/{id}` | Bearer | Get one user |
 | 5 | PUT | `/api/users/{id}` | Bearer | Update a user's profile fields |
 | 6 | PATCH | `/api/users/{id}/deactivate` | Bearer | Soft-disable a user |
 | 7 | DELETE | `/api/users/{id}` | Bearer | Permanently remove a user |
-| 8 | GET | `/actuator/health` | Public | Liveness check |
+| 8 | GET | `/api/users/me` | Bearer | View own profile |
+| 9 | PUT | `/api/users/me` | Bearer | Update own profile |
+| 10 | PATCH | `/api/users/me/password` | Bearer | Change own password |
+| 11 | PATCH | `/api/users/{id}/role` | ADMIN | Change a user's role |
+| 12 | PATCH | `/api/users/{id}/status` | ADMIN | Set ACTIVE / SUSPENDED / DEACTIVATED |
+| 13 | PATCH | `/api/users/{id}/activate` | ADMIN | Reactivate an account |
+| 14 | GET | `/actuator/health` | Public | Liveness check |
 
 ---
 
@@ -152,6 +158,44 @@ No body. Sets `active: false` without deleting the row.
 ```json
 { "status": "UP" }
 ```
+
+---
+
+## Profile, role & account status
+
+| Method | Path | Auth | Purpose |
+|--------|------|------|---------|
+| GET | `/api/users/me` | Bearer | View own profile (user id taken from the JWT) |
+| PUT | `/api/users/me` | Bearer | Update own `fullName` / `email` / `phone` |
+| PATCH | `/api/users/me/password` | Bearer | Change own password (`currentPassword`, `newPassword` >= 8 chars) - `204` |
+| GET | `/api/users?role=DRIVER&status=ACTIVE` | Bearer | Filter users by role and/or status |
+| PATCH | `/api/users/{id}/role` | ADMIN | Change a user's role |
+| PATCH | `/api/users/{id}/status` | ADMIN | Set account status with optional reason |
+| PATCH | `/api/users/{id}/activate` | ADMIN | Reactivate a suspended/deactivated account |
+
+**Account status model:** `ACTIVE`, `SUSPENDED` (temporary admin block), `DEACTIVATED` (closed).
+Only `ACTIVE` accounts can log in - login returns `401` with `Account is suspended` or `Account is deactivated`.
+The legacy `active` boolean in responses is kept and is `true` only when `status` is `ACTIVE`.
+
+**Roles:** `RIDER` (passenger), `DRIVER`, `ADMIN`. The role is embedded in the JWT, so a role change takes effect on the user's next login.
+Admins cannot remove their own `ADMIN` role (`400`). Non-admins calling admin endpoints get `403 Forbidden`.
+
+### `PATCH /api/users/{id}/status`
+```json
+{ "status": "SUSPENDED", "reason": "Under investigation for a rider complaint" }
+```
+**Response `200 OK`** - the updated user, including `"status": "SUSPENDED"`, `"statusReason": "..."`, `"active": false`.
+
+### `PATCH /api/users/{id}/role`
+```json
+{ "role": "DRIVER" }
+```
+
+### `PATCH /api/users/me/password`
+```json
+{ "currentPassword": "secret123", "newPassword": "newSecret456" }
+```
+`401` if `currentPassword` is wrong, `400` if the new password equals the old one.
 
 ---
 

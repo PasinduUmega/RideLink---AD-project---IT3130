@@ -1,0 +1,8 @@
+$kind: http-request
+description: Public liveness check - use this to confirm the service is up before running anything else.
+url: "{{baseUrl}}/actuator/health"
+method: GET
+auth:
+  type: noauth
+examples: ./.resources/GET Health.resources/examples
+order: 3000

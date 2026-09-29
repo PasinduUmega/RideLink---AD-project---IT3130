@@ -1,0 +1,26 @@
+$kind: http-request
+description: |-
+  Updates a user. Every field is optional - send only what you want to change. email must be a valid address if present.
+
+  Note: role, password and active are not editable through this endpoint.
+url: "{{baseUrl}}/api/users/{{userId}}"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "fullName": "Nimal Perera Updated",
+      "email": "nimal.updated@example.com",
+      "phone": "+94770000000"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('status is 200', function () {
+          pm.response.to.have.status(200);
+      });
+    language: text/javascript
+examples: ./.resources/PUT Update user.resources/examples
+order: 3000

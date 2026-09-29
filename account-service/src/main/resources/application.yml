@@ -37,4 +37,4 @@ spring:
       on-profile: '!test'
   data:
     mongodb:
-        uri: "mongodb+srv://kalharamax822:Brook123@brooks.wq4ubwu.mongodb.net/ridelink_accounts"
+      uri: ${MONGODB_URI:mongodb://localhost:27017/ridelink_accounts}

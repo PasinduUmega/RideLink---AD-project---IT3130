@@ -1,0 +1,10 @@
+# Use this workspace to collaborate
+workspace:
+  id: 57825017-5534-44b9-8ac9-aef3f32f5c29
+
+localResources:
+  collections:
+    - ../account-service.postman_collection.json
+    - ../RideLink - Account Service
+  environments:
+    - ../RideLink - Local.environment.yaml

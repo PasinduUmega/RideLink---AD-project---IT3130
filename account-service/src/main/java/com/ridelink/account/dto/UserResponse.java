@@ -1,5 +1,6 @@
 package com.ridelink.account.dto;
 
+import com.ridelink.account.entity.AccountStatus;
 import com.ridelink.account.entity.Role;
 import com.ridelink.account.entity.User;
 import lombok.AllArgsConstructor;
@@ -18,7 +19,10 @@ public class UserResponse {
     private String phone;
     private Role role;
     private boolean active;
+    private AccountStatus status;
+    private String statusReason;
     private Instant createdAt;
+    private Instant updatedAt;
 
     public static UserResponse from(User u) {
         return UserResponse.builder()
@@ -27,8 +31,11 @@ public class UserResponse {
                 .email(u.getEmail())
                 .phone(u.getPhone())
                 .role(u.getRole())
-                .active(u.isActive())
+                .active(u.getStatus() == AccountStatus.ACTIVE)
+                .status(u.getStatus())
+                .statusReason(u.getStatusReason())
                 .createdAt(u.getCreatedAt())
+                .updatedAt(u.getUpdatedAt())
                 .build();
     }
 }

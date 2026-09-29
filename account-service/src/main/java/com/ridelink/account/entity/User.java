@@ -40,10 +40,27 @@ public class User {
     @Builder.Default
     private Role role = Role.RIDER;
 
+    /** Kept in sync with {@link #status} for backwards compatibility (true only when ACTIVE). */
     @Builder.Default
     private boolean active = true;
+
+    @Builder.Default
+    private AccountStatus status = AccountStatus.ACTIVE;
+
+    private String statusReason;
 
     private Instant createdAt;
 
     private Instant updatedAt;
+
+    /** Status with a fallback for documents stored before the status field existed. */
+    public AccountStatus getStatus() {
+        if (status != null) return status;
+        return active ? AccountStatus.ACTIVE : AccountStatus.DEACTIVATED;
+    }
+
+    public void setStatus(AccountStatus status) {
+        this.status = status;
+        this.active = status == AccountStatus.ACTIVE;
+    }
 }
