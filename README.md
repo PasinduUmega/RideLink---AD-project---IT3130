@@ -1,52 +1,90 @@
-# 👤 RideLink — Account & Authentication Service
+# account-service
 
-[![Java](https://img.shields.io/badge/Java-17-orange.svg)](https://www.oracle.com/java/)
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.5-brightgreen.svg)](https://spring.io/projects/spring-boot)
-[![Database](https://img.shields.io/badge/Database-MongoDB-green.svg)](https://www.mongodb.com/)
-[![Security](https://img.shields.io/badge/Security-Spring%20Security%20%2B%20JWT-blue.svg)](https://jwt.io/)
-
-The **Account Service** is the central authentication and identity management microservice of the **RideLink** ride-hailing platform. It handles user onboarding, credential verification, cryptographic password hashing, JWT token issuance, and user profile lifecycle management.
-
----
-
-## 🚀 Features
-
-- **User Registration & Validation:** Automatic input validation (`@Email`, `@NotBlank`, password minimum length constraints).
-- **Password Security:** Cryptographic one-way hashing using `BCryptPasswordEncoder`.
-- **JWT Issuance:** Generates HMAC-signed JSON Web Tokens carrying `userId`, `email`, and `role` claims.
-- **Stateless Authorization:** Enforces stateless session management (`SessionCreationPolicy.STATELESS`) with a custom `JwtAuthFilter`.
-- **User CRUD Operations:** Full management for user details, role assignment, and account deactivation.
-
----
-
-## 🛠️ Tech Stack
-
-- **Language:** Java 17
-- **Framework:** Spring Boot 3.2.5
-- **Modules:** Spring Web, Spring Security, Spring Data MongoDB, Spring Boot Actuator, Spring Validation
-- **JWT Library:** JJWT (`io.jsonwebtoken 0.12.5`)
-- **Database:** MongoDB
-- **Build Tool:** Apache Maven
-
----
-
-## ⚙️ Configuration & Ports
+Handles user accounts, registration, login, and JWT issuance for the whole RideLink platform. Every other service trusts tokens signed here (they share `jwt.secret`).
 
 - **Port:** `8081`
-- **Database:** `ridelink_accounts` (MongoDB collection: `users`)
-- **Token Validity:** 24 Hours (`86400000 ms`)
+- **Database:** `ridelink_accounts` (MongoDB)
+- **IDs:** `User.id` is a MongoDB ObjectId string (not numeric).
 
----
+## Run locally
 
-## 🏃 Getting Started
+```bash
+# requires a local MongoDB on localhost:27017,
+# or override with env vars DB_HOST/DB_PORT/DB_NAME
+mvn spring-boot:run
+```
 
-### Prerequisites
-- **JDK 17** installed and configured
-- **Maven 3.8+** (or use your IDE's embedded Maven)
-- **MongoDB** instance or connection string
+Tests use an embedded in-memory MongoDB automatically — no external database needed to run `mvn test`.
 
-### Build and Run
+Or via Docker (see `shared/docker-compose.yml` to run the whole platform together).
 
-1. **Clone and navigate to the service directory:**
-   ```bash
-   cd account-service
+## Environment variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `DB_HOST` | `localhost` | MongoDB host |
+| `DB_PORT` | `27017` | MongoDB port |
+| `DB_NAME` | `ridelink_accounts` | Database name |
+| `DB_USERNAME` / `DB_PASSWORD` / `DB_AUTH_DATABASE` | (blank) / (blank) / `admin` | MongoDB credentials, if the instance requires auth |
+| `JWT_SECRET` | (dev default in `application.yml`) | **Must match** across all 4 services |
+| `JWT_EXPIRATION_MS` | `86400000` (24h) | Token lifetime |
+
+## API
+
+### Auth
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | `/api/auth/register` | none | Create an account, returns a JWT |
+| POST | `/api/auth/login` | none | Login, returns a JWT |
+
+**Register**
+```json
+POST /api/auth/register
+{
+  "fullName": "Ada Lovelace",
+  "email": "ada@example.com",
+  "password": "supersecret",
+  "phone": "+15551234567",
+  "role": "RIDER"
+}
+```
+`role` is optional and defaults to `RIDER`. Valid values: `RIDER`, `DRIVER`, `ADMIN`.
+
+**Response (both register & login)**
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiJ9...",
+  "tokenType": "Bearer",
+  "user": {
+    "id": "665f0a1b2c3d4e5f6a7b8c9d",
+    "fullName": "Ada Lovelace",
+    "email": "ada@example.com",
+    "phone": "+15551234567",
+    "role": "RIDER",
+    "active": true,
+    "createdAt": "2026-09-13T04:00:00Z"
+  }
+}
+```
+
+Use the token on every subsequent request to any RideLink service:
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...
+```
+
+### Users (requires `Authorization: Bearer <token>`)
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/users` | List all users |
+| GET | `/api/users/{id}` | Get a user |
+| PUT | `/api/users/{id}` | Update fullName/email/phone |
+| PATCH | `/api/users/{id}/deactivate` | Deactivate an account |
+| DELETE | `/api/users/{id}` | Delete a user |
+
+## Notes / production TODOs
+
+- Endpoint-level role checks (e.g. only `ADMIN` should list all users) are not yet enforced beyond "authenticated" — add `@PreAuthorize` checks as needed.
+- The JWT secret is shared via a plain env var for simplicity; in production use a secrets manager and consider asymmetric (RS256) signing so only account-service holds the private key.
+
