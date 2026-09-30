@@ -303,3 +303,4 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...
 - Endpoint-level role checks (e.g. only `ADMIN` should list all users) are not yet enforced beyond "authenticated" — add `@PreAuthorize` checks as needed.
 - The JWT secret is shared via a plain env var for simplicity; in production use a secrets manager and consider asymmetric (RS256) signing so only account-service holds the private key.
 
+- IT24102952
