@@ -1,0 +1,32 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/api/auth/register"
+  method: POST
+  headers:
+    Content-Type: application/json
+  body:
+    type: text
+    content: |-
+      {
+        "email": "rider@example.com",
+        "password": "short"
+      }
+response:
+  statusCode: 400
+  statusText: Bad Request
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "timestamp": "2026-09-13T13:00:33.776444200Z",
+        "status": 400,
+        "error": "Bad Request",
+        "message": "Validation failed",
+        "details": [
+          "fullName: must not be blank",
+          "password: Password must be at least 8 characters"
+        ]
+      }
+order: 2000

@@ -1,0 +1,13 @@
+$kind: http-request
+description: Returns a single user. 404 if the id does not exist.
+url: "{{baseUrl}}/api/users/{{userId}}"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('status is 200', function () {
+          pm.response.to.have.status(200);
+      });
+    language: text/javascript
+examples: ./.resources/GET User by id.resources/examples
+order: 2000
