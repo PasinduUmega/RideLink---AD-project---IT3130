@@ -1,0 +1,71 @@
+$kind: http-request
+description: |-
+  Creates a NEW RIDER user every time you send it (a unique email is generated) and returns that user's own JWT.
+
+  The test script saves it as {{riderToken}} and also as {{token}}, the active Bearer token used by every other request.
+
+  Returns 201 Created.
+url: "{{baseUrl}}/api/auth/register"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "fullName": "Nimal Perera",
+      "email": "{{riderEmail}}",
+      "password": "{{password}}",
+      "phone": "+94771234567",
+      "role": "RIDER"
+    }
+auth:
+  type: noauth
+scripts:
+  - type: beforeRequest
+    code: |-
+      // Save to the active environment AND the collection, so the value is never
+      // shadowed by an empty environment variable of the same name.
+      function save(key, value) {
+          pm.collectionVariables.set(key, value);
+          if (pm.environment.name) { pm.environment.set(key, value); }
+      }
+
+      // Unique email so every send creates a separate user with its own token
+      save('riderEmail', 'rider.' + Date.now() + '@ridelink.test');
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      // Save to the active environment AND the collection, so the value is never
+      // shadowed by an empty environment variable of the same name.
+      function save(key, value) {
+          pm.collectionVariables.set(key, value);
+          if (pm.environment.name) { pm.environment.set(key, value); }
+      }
+
+      pm.test('status is 201', function () {
+          pm.response.to.have.status(201);
+      });
+
+      if (pm.response.code === 201) {
+          var body = pm.response.json();
+          var role = body.user.role.toLowerCase();   // rider | driver | admin
+
+          // Active token - sent by the collection's Bearer auth on every request
+          save('token', body.token);
+          save('userId', body.user.id);
+
+          // Separate token per role: riderToken / driverToken / adminToken
+          save(role + 'Token', body.token);
+          save(role + 'Id', body.user.id);
+
+          console.log('Saved ' + role + ' token for ' + body.user.email + ' (id=' + body.user.id + ')');
+      }
+
+      // Remember the email so 'POST Login' can log this user back in
+      if (pm.response.code === 201) {
+          save('email', pm.variables.get('riderEmail'));
+      }
+    language: text/javascript
+examples: ./.resources/POST Register Rider.resources/examples
+order: 1000

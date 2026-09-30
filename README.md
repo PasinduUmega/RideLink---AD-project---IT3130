@@ -7,6 +7,32 @@ Calculates fares for completed rides and processes payments against them.
 - **Auth:** validates JWTs issued by `account-service`.
 - **IDs:** `Fare.id`, `Payment.id`, and cross-service references (`rideId`, `riderId`, `fareId`) are
   MongoDB ObjectId strings (not numeric).
+# driver-vehicle-service
+
+Manages driver profiles (license, approval status) and their vehicles.
+
+- **Port:** `8082`
+- **Database:** `ridelink_drivers` (MongoDB) — driver/vehicle profiles are self-contained documents
+  with no need for cross-record joins or transactions.
+- **Auth:** validates JWTs issued by `account-service` (shares `jwt.secret`); issues none itself.
+- **IDs:** `Driver.id` / `Vehicle.id` are MongoDB ObjectId strings (not numeric).
+# RideLink---AD-project---IT3130
+
+## ride-management-service
+
+Owns the lifecycle of a ride: request, driver acceptance, in-progress, completion, cancellation.
+
+- **Port:** `8083`
+- **Database:** `ridelink_rides` (MongoDB)
+- **Auth:** validates JWTs issued by `account-service`.
+- **IDs:** `Ride.id`, `riderId`, and `driverId` are MongoDB ObjectId strings (not numeric).
+# account-service
+
+Handles user accounts, registration, login, and JWT issuance for the whole RideLink platform. Every other service trusts tokens signed here (they share `jwt.secret`).
+
+- **Port:** `8081`
+- **Database:** `ridelink_accounts` (MongoDB)
+- **IDs:** `User.id` is a MongoDB ObjectId string (not numeric).
 
 ## Run locally
 
@@ -16,6 +42,15 @@ mvn spring-boot:run
 
 Requires a MongoDB instance reachable at `DB_HOST:DB_PORT` (defaults to `localhost:27017`).
 Tests use an embedded in-memory MongoDB automatically — no external database needed to run `mvn test`.
+
+# requires a local MongoDB on localhost:27017,
+# or override with env vars DB_HOST/DB_PORT/DB_NAME
+mvn spring-boot:run
+```
+
+Tests use an embedded in-memory MongoDB automatically — no external database needed to run `mvn test`.
+
+Or via Docker (see `shared/docker-compose.yml` to run the whole platform together).
 
 ## Environment variables
 
@@ -93,3 +128,179 @@ POST /api/payments
 
 - `PaymentService.simulateGateway()` is a stub that always succeeds — swap in a real gateway SDK (Stripe, Braintree, etc.) and handle async webhook confirmation instead of a synchronous result.
 - No idempotency key is enforced on `POST /api/payments` yet; add one before wiring up a real client that might retry.
+
+## API
+
+All endpoints below require `Authorization: Bearer <token>` (a token issued by account-service).
+
+### Drivers
+
+| Method | Path | Description |
+|---|---|---|
+| POST | `/api/drivers` | Create a driver profile for a userId |
+| GET | `/api/drivers` | List drivers (optional `?status=PENDING\|APPROVED\|REJECTED\|SUSPENDED`) |
+| GET | `/api/drivers/{id}` | Get a driver |
+| GET | `/api/drivers/by-user/{userId}` | Get a driver by their account-service userId |
+| PUT | `/api/drivers/{id}` | Update license number/expiry |
+| PATCH | `/api/drivers/{id}/status` | Change driver status (e.g. approve/reject) |
+| DELETE | `/api/drivers/{id}` | Delete a driver |
+
+**Create driver**
+```json
+POST /api/drivers
+{
+  "userId": "665f0a1b2c3d4e5f6a7b8c9d",
+  "licenseNumber": "D1234567",
+  "licenseExpiry": "2028-01-01"
+}
+```
+
+**Update status**
+```json
+PATCH /api/drivers/665f1a2b3c4d5e6f7a8b9c0d/status
+{ "status": "APPROVED" }
+```
+
+### Vehicles
+
+| Method | Path | Description |
+|---|---|---|
+| POST | `/api/vehicles` | Register a vehicle to a driver |
+| GET | `/api/vehicles` | List vehicles (optional `?driverId=`) |
+| GET | `/api/vehicles/{id}` | Get a vehicle |
+| PUT | `/api/vehicles/{id}` | Update make/model/year/color/capacity |
+| PATCH | `/api/vehicles/{id}/deactivate` | Deactivate a vehicle |
+| DELETE | `/api/vehicles/{id}` | Delete a vehicle |
+
+**Register vehicle**
+```json
+POST /api/vehicles
+{
+  "driverId": "665f1a2b3c4d5e6f7a8b9c0d",
+  "make": "Toyota",
+  "model": "Camry",
+  "year": 2022,
+  "plateNumber": "ABC-1234",
+  "color": "Silver",
+  "capacity": 4
+}
+```
+
+## Notes / production TODOs
+
+- Cross-service references (`userId`) are not enforced by a foreign key since each service owns its own database — validate against account-service via HTTP call or an event stream if strict consistency is needed.
+- Only `ADMIN`/ops roles should be able to call `PATCH /api/drivers/{id}/status`; add `@PreAuthorize("hasRole('ADMIN')")` once role policy is finalized.
+| `FARE_SERVICE_URL` | `http://localhost:8084` | Base URL of fare-payment-service |
+
+## Ride state machine
+
+```
+REQUESTED --accept--> ACCEPTED --start--> IN_PROGRESS --complete--> COMPLETED
+    |                     |                    |
+    +------------------ cancel ----------------+
+                          v
+                      CANCELLED
+```
+Each transition is validated server-side; calling e.g. `/start` on a ride that isn't `ACCEPTED` returns `409 Conflict`.
+
+## API
+
+All endpoints require `Authorization: Bearer <token>`.
+
+| Method | Path | Description |
+|---|---|---|
+| POST | `/api/rides` | Rider requests a ride |
+| GET | `/api/rides` | List rides (optional `?riderId=`, `?driverId=`, or `?status=`) |
+| GET | `/api/rides/{id}` | Get a ride |
+| PATCH | `/api/rides/{id}/accept` | Driver accepts (`{"driverId": "665f1a2b3c4d5e6f7a8b9c0d"}` — a MongoDB ObjectId from driver-vehicle-service) |
+| PATCH | `/api/rides/{id}/start` | Driver starts the trip |
+| PATCH | `/api/rides/{id}/complete` | Driver marks the trip complete |
+| PATCH | `/api/rides/{id}/cancel` | Rider or driver cancels (`{"reason": "..."}`, optional body) |
+
+**Request a ride**
+```json
+POST /api/rides
+{
+  "riderId": "665f0a1b2c3d4e5f6a7b8c9d",
+  "pickupLocation": "123 Main St",
+  "dropoffLocation": "456 Market St",
+  "pickupLat": 37.7749,
+  "pickupLng": -122.4194,
+  "dropoffLat": 37.7849,
+  "dropoffLng": -122.4094,
+  "distanceKm": 4.2
+}
+```
+If `distanceKm` is provided, an `estimatedFare` is calculated with a simple flat-rate model (`$2.50` base + `$1.20`/km) — this is a placeholder; final billing happens in `fare-payment-service`.
+
+## Notes / production TODOs
+
+- On `complete`, this service currently only recalculates its own `estimatedFare`. A production build would call `fare-payment-service`'s `POST /api/fares` (see `services.fare-payment.base-url`) to create the authoritative fare record — wire that up in `RideService.complete()`.
+- Driver eligibility (must be `APPROVED` in driver-vehicle-service) isn't checked before `accept` — add a call to driver-vehicle-service or an event-driven check.
+| `DB_HOST` | `localhost` | MongoDB host |
+| `DB_PORT` | `27017` | MongoDB port |
+| `DB_NAME` | `ridelink_accounts` | Database name |
+| `DB_USERNAME` / `DB_PASSWORD` / `DB_AUTH_DATABASE` | (blank) / (blank) / `admin` | MongoDB credentials, if the instance requires auth |
+| `JWT_SECRET` | (dev default in `application.yml`) | **Must match** across all 4 services |
+| `JWT_EXPIRATION_MS` | `86400000` (24h) | Token lifetime |
+
+## API
+
+### Auth
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | `/api/auth/register` | none | Create an account, returns a JWT |
+| POST | `/api/auth/login` | none | Login, returns a JWT |
+
+**Register**
+```json
+POST /api/auth/register
+{
+  "fullName": "Ada Lovelace",
+  "email": "ada@example.com",
+  "password": "supersecret",
+  "phone": "+15551234567",
+  "role": "RIDER"
+}
+```
+`role` is optional and defaults to `RIDER`. Valid values: `RIDER`, `DRIVER`, `ADMIN`.
+
+**Response (both register & login)**
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiJ9...",
+  "tokenType": "Bearer",
+  "user": {
+    "id": "665f0a1b2c3d4e5f6a7b8c9d",
+    "fullName": "Ada Lovelace",
+    "email": "ada@example.com",
+    "phone": "+15551234567",
+    "role": "RIDER",
+    "active": true,
+    "createdAt": "2026-09-13T04:00:00Z"
+  }
+}
+```
+
+Use the token on every subsequent request to any RideLink service:
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...
+```
+
+### Users (requires `Authorization: Bearer <token>`)
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/users` | List all users |
+| GET | `/api/users/{id}` | Get a user |
+| PUT | `/api/users/{id}` | Update fullName/email/phone |
+| PATCH | `/api/users/{id}/deactivate` | Deactivate an account |
+| DELETE | `/api/users/{id}` | Delete a user |
+
+## Notes / production TODOs
+
+- Endpoint-level role checks (e.g. only `ADMIN` should list all users) are not yet enforced beyond "authenticated" — add `@PreAuthorize` checks as needed.
+- The JWT secret is shared via a plain env var for simplicity; in production use a secrets manager and consider asymmetric (RS256) signing so only account-service holds the private key.
+
+- IT24102952

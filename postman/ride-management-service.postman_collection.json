@@ -1,0 +1,324 @@
+{
+  "info": {
+    "name": "RideLink - Ride Management Service",
+    "description": "Ride request and lifecycle endpoints (port 8083).\n\nThis service validates JWTs signed with the shared jwt.secret but does not issue them - paste a token from account-service's Login/Register into {{token}}. Run Create Ride -> Accept -> Start -> Complete in order to walk the full lifecycle; each step auto-saves rideId and checks the resulting status.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{token}}", "type": "string" }
+    ]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8083", "type": "string" },
+    { "key": "token", "value": "", "type": "string", "description": "JWT obtained from account-service's /api/auth/login or /api/auth/register" },
+    { "key": "riderId", "value": "665f0a1b2c3d4e5f6a7b8c9d", "type": "string", "description": "An existing account-service User.id (role RIDER)" },
+    { "key": "driverId", "value": "665f1a2b3c4d5e6f7a8b9c0d", "type": "string", "description": "An existing driver-vehicle-service Driver.id (MongoDB ObjectId), ideally APPROVED" },
+    { "key": "rideId", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "POST Request ride",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"riderId\": \"{{riderId}}\",\n  \"pickupLocation\": \"Colombo Fort Railway Station\",\n  \"dropoffLocation\": \"Bandaranaike International Airport\",\n  \"pickupLat\": 6.9344,\n  \"pickupLng\": 79.8428,\n  \"dropoffLat\": 7.1808,\n  \"dropoffLng\": 79.8841,\n  \"distanceKm\": 32.5\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": { "raw": "{{baseUrl}}/api/rides", "host": ["{{baseUrl}}"], "path": ["api", "rides"] },
+        "description": "Creates a ride request. riderId, pickupLocation and dropoffLocation are required; lat/lng and distanceKm are optional but if distanceKm is supplied an estimatedFare is computed immediately using the flat-rate model (baseFare + distanceKm x perKmRate). New rides start in REQUESTED status.\n\nReturns 201 Created."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 201', function () { pm.response.to.have.status(201); });",
+              "pm.test('ride is REQUESTED', function () { pm.expect(pm.response.json().status).to.eql('REQUESTED'); });",
+              "if (pm.response.code === 201) {",
+              "    var body = pm.response.json();",
+              "    pm.collectionVariables.set('rideId', body.id);",
+              "    console.log('Saved rideId=' + body.id);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "201 Created",
+          "originalRequest": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"riderId\": \"665f0a1b2c3d4e5f6a7b8c9d\",\n  \"pickupLocation\": \"Colombo Fort Railway Station\",\n  \"dropoffLocation\": \"Bandaranaike International Airport\",\n  \"distanceKm\": 32.5\n}" },
+            "url": { "raw": "{{baseUrl}}/api/rides", "host": ["{{baseUrl}}"], "path": ["api", "rides"] }
+          },
+          "status": "Created",
+          "code": 201,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"id\": \"77a0b1c2d3e4f5a6b7c8d9e0\",\n  \"riderId\": \"665f0a1b2c3d4e5f6a7b8c9d\",\n  \"driverId\": null,\n  \"pickupLocation\": \"Colombo Fort Railway Station\",\n  \"dropoffLocation\": \"Bandaranaike International Airport\",\n  \"pickupLat\": null,\n  \"pickupLng\": null,\n  \"dropoffLat\": null,\n  \"dropoffLng\": null,\n  \"status\": \"REQUESTED\",\n  \"distanceKm\": 32.5,\n  \"estimatedFare\": 41.5,\n  \"cancellationReason\": null,\n  \"requestedAt\": \"2026-09-13T16:00:00Z\",\n  \"acceptedAt\": null,\n  \"startedAt\": null,\n  \"completedAt\": null,\n  \"cancelledAt\": null\n}"
+        },
+        {
+          "name": "400 Validation failed",
+          "originalRequest": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"pickupLocation\": \"\",\n  \"dropoffLocation\": \"Airport\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/rides", "host": ["{{baseUrl}}"], "path": ["api", "rides"] }
+          },
+          "status": "Bad Request",
+          "code": 400,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"timestamp\": \"2026-09-13T16:00:00Z\",\n  \"status\": 400,\n  \"error\": \"Bad Request\",\n  \"message\": \"Validation failed\",\n  \"details\": [\"riderId: must not be blank\", \"pickupLocation: must not be blank\"]\n}"
+        }
+      ]
+    },
+    {
+      "name": "GET All rides (filter by rider/driver/status)",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/api/rides?status=REQUESTED",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "rides"],
+          "query": [
+            { "key": "riderId", "value": "{{riderId}}", "disabled": true },
+            { "key": "driverId", "value": "{{driverId}}", "disabled": true },
+            { "key": "status", "value": "REQUESTED" }
+          ]
+        },
+        "description": "Lists rides. Exactly one filter is applied at a time in this order of precedence: riderId, then driverId, then status; enable only the query param you want. Omit all three to list every ride."
+      },
+      "event": [
+        { "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('status is 200', function () { pm.response.to.have.status(200); });"] } }
+      ],
+      "response": [
+        {
+          "name": "200 OK",
+          "originalRequest": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/rides?status=REQUESTED", "host": ["{{baseUrl}}"], "path": ["api", "rides"], "query": [{ "key": "status", "value": "REQUESTED" }] } },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "[\n  {\n    \"id\": \"77a0b1c2d3e4f5a6b7c8d9e0\",\n    \"riderId\": \"665f0a1b2c3d4e5f6a7b8c9d\",\n    \"driverId\": null,\n    \"pickupLocation\": \"Colombo Fort Railway Station\",\n    \"dropoffLocation\": \"Bandaranaike International Airport\",\n    \"status\": \"REQUESTED\",\n    \"distanceKm\": 32.5,\n    \"estimatedFare\": 41.5,\n    \"requestedAt\": \"2026-09-13T16:00:00Z\"\n  }\n]"
+        }
+      ]
+    },
+    {
+      "name": "GET Ride by id",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/rides/{{rideId}}", "host": ["{{baseUrl}}"], "path": ["api", "rides", "{{rideId}}"] },
+        "description": "Returns a single ride. 404 if the id does not exist."
+      },
+      "response": [
+        {
+          "name": "404 Not Found",
+          "originalRequest": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/rides/000000000000000000000000", "host": ["{{baseUrl}}"], "path": ["api", "rides", "000000000000000000000000"] } },
+          "status": "Not Found",
+          "code": 404,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"timestamp\": \"2026-09-13T16:00:00Z\",\n  \"status\": 404,\n  \"error\": \"Not Found\",\n  \"message\": \"Ride not found with id: 000000000000000000000000\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "PATCH Accept ride",
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"driverId\": \"{{driverId}}\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": { "raw": "{{baseUrl}}/api/rides/{{rideId}}/accept", "host": ["{{baseUrl}}"], "path": ["api", "rides", "{{rideId}}", "accept"] },
+        "description": "A driver accepts the ride. Only valid when the ride is currently REQUESTED; moves it to ACCEPTED and stamps acceptedAt. driverId comes from driver-vehicle-service (typically selected from GET /api/drivers?status=APPROVED there).\n\nCalling this on a ride that is not REQUESTED (e.g. already ACCEPTED, or CANCELLED) is one of this API's negative scenarios - see the response example below."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('ride is ACCEPTED', function () { pm.expect(pm.response.json().status).to.eql('ACCEPTED'); });"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "200 OK",
+          "originalRequest": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"driverId\": \"665f1a2b3c4d5e6f7a8b9c0d\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/rides/77a0b1c2d3e4f5a6b7c8d9e0/accept", "host": ["{{baseUrl}}"], "path": ["api", "rides", "77a0b1c2d3e4f5a6b7c8d9e0", "accept"] }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"id\": \"77a0b1c2d3e4f5a6b7c8d9e0\",\n  \"riderId\": \"665f0a1b2c3d4e5f6a7b8c9d\",\n  \"driverId\": \"665f1a2b3c4d5e6f7a8b9c0d\",\n  \"pickupLocation\": \"Colombo Fort Railway Station\",\n  \"dropoffLocation\": \"Bandaranaike International Airport\",\n  \"status\": \"ACCEPTED\",\n  \"distanceKm\": 32.5,\n  \"estimatedFare\": 41.5,\n  \"requestedAt\": \"2026-09-13T16:00:00Z\",\n  \"acceptedAt\": \"2026-09-13T16:01:00Z\"\n}"
+        },
+        {
+          "name": "409 Invalid state transition (already accepted/cancelled)",
+          "originalRequest": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"driverId\": \"665f1a2b3c4d5e6f7a8b9c0d\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/rides/77a0b1c2d3e4f5a6b7c8d9e0/accept", "host": ["{{baseUrl}}"], "path": ["api", "rides", "77a0b1c2d3e4f5a6b7c8d9e0", "accept"] }
+          },
+          "status": "Conflict",
+          "code": 409,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"timestamp\": \"2026-09-13T16:01:30Z\",\n  \"status\": 409,\n  \"error\": \"Conflict\",\n  \"message\": \"Ride is ACCEPTED, expected REQUESTED for this action\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "PATCH Start ride",
+      "request": {
+        "method": "PATCH",
+        "url": { "raw": "{{baseUrl}}/api/rides/{{rideId}}/start", "host": ["{{baseUrl}}"], "path": ["api", "rides", "{{rideId}}", "start"] },
+        "description": "Marks the ride as in progress (driver has picked up the rider). Only valid when the ride is currently ACCEPTED; moves it to IN_PROGRESS and stamps startedAt."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('ride is IN_PROGRESS', function () { pm.expect(pm.response.json().status).to.eql('IN_PROGRESS'); });"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "200 OK",
+          "originalRequest": { "method": "PATCH", "url": { "raw": "{{baseUrl}}/api/rides/77a0b1c2d3e4f5a6b7c8d9e0/start", "host": ["{{baseUrl}}"], "path": ["api", "rides", "77a0b1c2d3e4f5a6b7c8d9e0", "start"] } },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"id\": \"77a0b1c2d3e4f5a6b7c8d9e0\",\n  \"riderId\": \"665f0a1b2c3d4e5f6a7b8c9d\",\n  \"driverId\": \"665f1a2b3c4d5e6f7a8b9c0d\",\n  \"status\": \"IN_PROGRESS\",\n  \"distanceKm\": 32.5,\n  \"estimatedFare\": 41.5,\n  \"requestedAt\": \"2026-09-13T16:00:00Z\",\n  \"acceptedAt\": \"2026-09-13T16:01:00Z\",\n  \"startedAt\": \"2026-09-13T16:05:00Z\"\n}"
+        },
+        {
+          "name": "409 Invalid transition (start before accept)",
+          "originalRequest": { "method": "PATCH", "url": { "raw": "{{baseUrl}}/api/rides/88b1c2d3e4f5a6b7c8d9e0f1/start", "host": ["{{baseUrl}}"], "path": ["api", "rides", "88b1c2d3e4f5a6b7c8d9e0f1", "start"] } },
+          "status": "Conflict",
+          "code": 409,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"timestamp\": \"2026-09-13T16:05:00Z\",\n  \"status\": 409,\n  \"error\": \"Conflict\",\n  \"message\": \"Ride is REQUESTED, expected ACCEPTED for this action\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "PATCH Complete ride",
+      "request": {
+        "method": "PATCH",
+        "url": { "raw": "{{baseUrl}}/api/rides/{{rideId}}/complete", "host": ["{{baseUrl}}"], "path": ["api", "rides", "{{rideId}}", "complete"] },
+        "description": "Marks the ride as finished. Only valid when the ride is currently IN_PROGRESS; moves it to COMPLETED, stamps completedAt, and recomputes estimatedFare if distanceKm is set. Follow this with fare-payment-service's POST /api/fares (using this rideId) to record the actual fare and payment."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('ride is COMPLETED', function () { pm.expect(pm.response.json().status).to.eql('COMPLETED'); });"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "200 OK",
+          "originalRequest": { "method": "PATCH", "url": { "raw": "{{baseUrl}}/api/rides/77a0b1c2d3e4f5a6b7c8d9e0/complete", "host": ["{{baseUrl}}"], "path": ["api", "rides", "77a0b1c2d3e4f5a6b7c8d9e0", "complete"] } },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"id\": \"77a0b1c2d3e4f5a6b7c8d9e0\",\n  \"riderId\": \"665f0a1b2c3d4e5f6a7b8c9d\",\n  \"driverId\": \"665f1a2b3c4d5e6f7a8b9c0d\",\n  \"status\": \"COMPLETED\",\n  \"distanceKm\": 32.5,\n  \"estimatedFare\": 41.5,\n  \"requestedAt\": \"2026-09-13T16:00:00Z\",\n  \"acceptedAt\": \"2026-09-13T16:01:00Z\",\n  \"startedAt\": \"2026-09-13T16:05:00Z\",\n  \"completedAt\": \"2026-09-13T16:35:00Z\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "PATCH Cancel ride",
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"reason\": \"Rider changed their mind\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": { "raw": "{{baseUrl}}/api/rides/{{rideId}}/cancel", "host": ["{{baseUrl}}"], "path": ["api", "rides", "{{rideId}}", "cancel"] },
+        "description": "Cancels a ride. Valid from REQUESTED, ACCEPTED or IN_PROGRESS; the reason field is optional. Cancelling a ride that is already COMPLETED or CANCELLED is refused - see the negative-scenario response below."
+      },
+      "response": [
+        {
+          "name": "200 OK",
+          "originalRequest": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Rider changed their mind\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/rides/88b1c2d3e4f5a6b7c8d9e0f1/cancel", "host": ["{{baseUrl}}"], "path": ["api", "rides", "88b1c2d3e4f5a6b7c8d9e0f1", "cancel"] }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"id\": \"88b1c2d3e4f5a6b7c8d9e0f1\",\n  \"riderId\": \"665f0a1b2c3d4e5f6a7b8c9d\",\n  \"driverId\": null,\n  \"status\": \"CANCELLED\",\n  \"cancellationReason\": \"Rider changed their mind\",\n  \"requestedAt\": \"2026-09-13T16:10:00Z\",\n  \"cancelledAt\": \"2026-09-13T16:11:00Z\"\n}"
+        },
+        {
+          "name": "409 Cannot cancel a completed ride",
+          "originalRequest": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"test\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/rides/77a0b1c2d3e4f5a6b7c8d9e0/cancel", "host": ["{{baseUrl}}"], "path": ["api", "rides", "77a0b1c2d3e4f5a6b7c8d9e0", "cancel"] }
+          },
+          "status": "Conflict",
+          "code": 409,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"timestamp\": \"2026-09-13T16:36:00Z\",\n  \"status\": 409,\n  \"error\": \"Conflict\",\n  \"message\": \"Cannot cancel a ride that is already COMPLETED\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "GET Health",
+      "request": {
+        "auth": { "type": "noauth" },
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/actuator/health", "host": ["{{baseUrl}}"], "path": ["actuator", "health"] },
+        "description": "Public liveness check."
+      },
+      "response": [
+        {
+          "name": "200 OK",
+          "originalRequest": { "method": "GET", "url": { "raw": "{{baseUrl}}/actuator/health", "host": ["{{baseUrl}}"], "path": ["actuator", "health"] } },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"status\": \"UP\"\n}"
+        }
+      ]
+    }
+  ]
+}

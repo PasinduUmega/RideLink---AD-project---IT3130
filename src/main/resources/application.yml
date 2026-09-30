@@ -4,6 +4,16 @@ server:
 spring:
   application:
     name: fare-payment-service
+  port: 8082
+
+spring:
+  application:
+    name: driver-vehicle-service
+  port: 8083
+
+spring:
+  application:
+    name: ride-management-service
   jackson:
     default-property-inclusion: non_null
 
@@ -21,6 +31,14 @@ fare:
   average-speed-kmh: ${FARE_AVG_SPEED_KMH:30}
   currency: ${FARE_CURRENCY:USD}
 
+  # Must match the secret used by account-service - this service only
+  # validates tokens, it never issues them.
+  secret: ${JWT_SECRET:ridelink-shared-super-secret-key-change-me-in-prod-0123456789}
+# Base URL of fare-payment-service, used when a ride completes to trigger fare calculation.
+services:
+  fare-payment:
+    base-url: ${FARE_SERVICE_URL:http://localhost:8084}
+
 management:
   endpoints:
     web:
@@ -30,6 +48,8 @@ management:
 logging:
   level:
     com.ridelink.farepayment: INFO
+    com.ridelink.drivervehicle: INFO
+    com.ridelink.ridemanagement: INFO
 
 ---
 # Real MongoDB connection - inactive under the "test" profile so tests
@@ -46,3 +66,5 @@ spring:
   data:
     mongodb:
       uri: ${MONGODB_URI:mongodb://localhost:27017/ridelink_payments}
+      uri: ${MONGODB_URI:mongodb://localhost:27017/ridelink_drivers}
+      uri: ${MONGODB_URI:mongodb://localhost:27017/ridelink_rides}
