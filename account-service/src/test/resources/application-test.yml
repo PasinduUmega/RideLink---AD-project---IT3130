@@ -4,7 +4,8 @@ spring:
       database: ridelink_accounts_test
       socket-timeout-ms: 120000
       server-selection-timeout-ms: 120000
-      connect-timeout-ms: 60000
+      connect-timeout-ms: 120000
+      connection-pool-timeout-ms: 120000
       # MongoDB connection URI will be set dynamically by Testcontainers via @DynamicPropertySource
 
 jwt:
