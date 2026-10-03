@@ -26,6 +26,10 @@ public abstract class AbstractMongoTest {
 
     @DynamicPropertySource
     static void setProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.data.mongodb.uri", mongoDBContainer::getReplicaSetUrl);
+        // directConnection=true: MongoDBContainer runs a single-node replica set whose member
+        // advertises the container-internal hostname; without this the driver switches to replica-set
+        // discovery, can't reach that hostname, and every DB call times out.
+        registry.add("spring.data.mongodb.uri", () -> "mongodb://" + mongoDBContainer.getHost() + ":"
+                + mongoDBContainer.getMappedPort(27017) + "/ridelink_rides_test?directConnection=true");
     }
 }
