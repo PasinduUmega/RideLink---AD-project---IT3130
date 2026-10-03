@@ -8,6 +8,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
 
+/** MongoDB vehicle document; each vehicle refers to its owner through driverId. */
 @Document(collection = "vehicles")
 @Getter
 @Setter
@@ -19,6 +20,7 @@ public class Vehicle {
     @Id
     private String id;
 
+    // Index this reference to support vehicle lookups by driver.
     @Indexed
     private String driverId;
 
@@ -36,6 +38,7 @@ public class Vehicle {
 
     private String color;
 
+    // Defaults also apply when instances are created through Lombok's builder.
     @Builder.Default
     private Integer capacity = 4;
 

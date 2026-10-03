@@ -11,6 +11,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 
+/** Defines the driver data returned to API clients, including vehicles and optional pickup distance. */
 @Getter
 @Builder
 @AllArgsConstructor
@@ -36,6 +37,7 @@ public class DriverResponse {
     }
 
     public static DriverResponse from(Driver d, List<VehicleResponse> vehicles) {
+        // Convert the stored document to API data; older records without availability appear OFFLINE.
         return DriverResponse.builder()
                 .id(d.getId())
                 .userId(d.getUserId())
@@ -54,6 +56,7 @@ public class DriverResponse {
     }
 
     public static DriverResponse from(Driver d, List<VehicleResponse> vehicles, Double distanceKm) {
+        // Add a calculated distance for available-driver searches without storing it in MongoDB.
         DriverResponse response = from(d, vehicles);
         response.distanceKm = distanceKm;
         return response;

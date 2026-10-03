@@ -9,6 +9,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import java.time.Instant;
 import java.time.LocalDate;
 
+/** MongoDB driver document; Lombok generates accessors, constructors and the builder. */
 @Document(collection = "drivers")
 @Getter
 @Setter
@@ -30,6 +31,7 @@ public class Driver {
 
     private LocalDate licenseExpiry;
 
+    // Builder.Default preserves the initial value when the builder does not supply this field.
     @Builder.Default
     private DriverStatus status = DriverStatus.PENDING;
 

@@ -28,6 +28,7 @@ public final class GeoUtils {
 
     /** Great-circle distance between two points using the haversine formula. */
     public static double distanceKm(double lat1, double lng1, double lat2, double lng2) {
+        // Convert degree differences to radians for trigonometric distance calculations.
         double dLat = Math.toRadians(lat2 - lat1);
         double dLng = Math.toRadians(lng2 - lng1);
         double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
@@ -36,6 +37,7 @@ public final class GeoUtils {
         return EARTH_RADIUS_KM * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 
+    /** Finds a known city centre; an unknown or missing area returns an empty result. */
     public static Optional<double[]> centreOf(String serviceArea) {
         if (serviceArea == null) return Optional.empty();
         return Optional.ofNullable(SERVICE_AREA_CENTRES.get(serviceArea.trim().toUpperCase()));
@@ -44,13 +46,16 @@ public final class GeoUtils {
     /** Returns a random point within {@code maxKm} of the origin. */
     public static double[] randomNearby(double lat, double lng, double maxKm) {
         ThreadLocalRandom rnd = ThreadLocalRandom.current();
+        // The square root spreads points uniformly over the disk's area; bearing picks a direction.
         double distance = maxKm * Math.sqrt(rnd.nextDouble());
         double bearing = rnd.nextDouble() * 2 * Math.PI;
+        // Approximate a small movement in coordinates, correcting longitude for latitude.
         double dLat = (distance / EARTH_RADIUS_KM) * Math.cos(bearing);
         double dLng = (distance / EARTH_RADIUS_KM) * Math.sin(bearing) / Math.cos(Math.toRadians(lat));
         return new double[]{round(lat + Math.toDegrees(dLat)), round(lng + Math.toDegrees(dLng))};
     }
 
+    /** Limits returned coordinates and distances to six decimal places. */
     public static double round(double value) {
         return Math.round(value * 1_000_000.0) / 1_000_000.0;
     }

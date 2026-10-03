@@ -7,6 +7,7 @@ import lombok.Getter;
 import java.time.Instant;
 import java.util.List;
 
+/** Shared JSON error body with an HTTP status, message and optional field validation details. */
 @Getter
 @Builder
 @AllArgsConstructor

@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 
+/** Carries the required approval status for a driver status update. */
 @Getter
 @Setter
 public class UpdateDriverStatusRequest {

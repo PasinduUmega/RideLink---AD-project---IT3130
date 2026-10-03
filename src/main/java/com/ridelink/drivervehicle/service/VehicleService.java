@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.List;
 
+/** Registers vehicles for existing drivers and manages vehicle details and active status. */
 @Service
 public class VehicleService {
 
@@ -23,13 +24,16 @@ public class VehicleService {
     }
 
     public VehicleResponse create(CreateVehicleRequest req) {
+        // Check plate uniqueness before linking the new vehicle to an existing driver.
         if (vehicleRepository.existsByPlateNumber(req.getPlateNumber())) {
             throw new BadRequestException("A vehicle with this plate number already exists");
         }
 
+        // Driver IDs are references between documents, so existence is checked explicitly.
         driverRepository.findById(req.getDriverId())
                 .orElseThrow(() -> new ResourceNotFoundException("Driver not found with id: " + req.getDriverId()));
 
+        // Default to four seats when capacity is omitted; the entity defaults to active.
         Instant now = Instant.now();
         Vehicle vehicle = Vehicle.builder()
                 .driverId(req.getDriverId())
@@ -60,6 +64,7 @@ public class VehicleService {
 
     public VehicleResponse update(String id, UpdateVehicleRequest req) {
         Vehicle vehicle = findOr404(id);
+        // Update only supplied fields; the owner and plate number are not editable here.
         if (req.getMake() != null) vehicle.setMake(req.getMake());
         if (req.getModel() != null) vehicle.setModel(req.getModel());
         if (req.getYear() != null) vehicle.setYear(req.getYear());
@@ -74,6 +79,7 @@ public class VehicleService {
     }
 
     public VehicleResponse deactivate(String id) {
+        // Preserve the record while making this vehicle ineligible for ride matching.
         Vehicle vehicle = findOr404(id);
         vehicle.setActive(false);
         vehicle.setUpdatedAt(Instant.now());
@@ -81,6 +87,7 @@ public class VehicleService {
     }
 
     private Vehicle findOr404(String id) {
+        // The global exception handler converts a missing vehicle into HTTP 404.
         return vehicleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found with id: " + id));
     }

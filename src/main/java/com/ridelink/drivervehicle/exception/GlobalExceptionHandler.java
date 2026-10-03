@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.time.Instant;
 import java.util.List;
 
+/** Converts controller/service exceptions into consistent JSON responses with suitable HTTP codes. */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -28,6 +29,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiError> handleValidation(MethodArgumentNotValidException ex) {
+        // Collect each invalid field and its validation message for the client to correct.
         List<String> details = ex.getBindingResult().getFieldErrors().stream()
                 .map(f -> f.getField() + ": " + f.getDefaultMessage())
                 .toList();
@@ -56,12 +58,14 @@ public class GlobalExceptionHandler {
                 "Invalid value '" + ex.getValue() + "' for parameter '" + ex.getName() + "'", null);
     }
 
+    // Exceptions without a more specific handler become HTTP 500 responses.
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleGeneric(Exception ex) {
         return build(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error: " + ex.getMessage(), null);
     }
 
     private ResponseEntity<ApiError> build(HttpStatus status, String message, List<String> details) {
+        // Keep the response's HTTP code and JSON status in sync and timestamp the error.
         ApiError error = ApiError.builder()
                 .timestamp(Instant.now())
                 .status(status.value())

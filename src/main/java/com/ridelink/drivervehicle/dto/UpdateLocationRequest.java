@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 
+/** Requires both coordinates and validates latitude within -90..90 and longitude within -180..180. */
 @Getter
 @Setter
 public class UpdateLocationRequest {

@@ -17,6 +17,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
+/** Manages driver profiles, ride availability and location-based driver searches. */
 @Service
 public class DriverService {
 
@@ -35,6 +36,7 @@ public class DriverService {
     }
 
     public DriverResponse create(CreateDriverRequest req) {
+        // Reject duplicate licenses and multiple driver profiles for the same account.
         if (driverRepository.existsByLicenseNumber(req.getLicenseNumber())) {
             throw new BadRequestException("A driver with this license number already exists");
         }
@@ -42,6 +44,7 @@ public class DriverService {
             throw new BadRequestException("This user already has a driver profile");
         });
 
+        // New drivers start pending approval and offline, so they cannot receive rides yet.
         Instant now = Instant.now();
         Driver driver = Driver.builder()
                 .userId(req.getUserId())
@@ -77,6 +80,7 @@ public class DriverService {
 
     public DriverResponse update(String id, UpdateDriverRequest req) {
         Driver driver = findOr404(id);
+        // Only supplied fields are changed; null values leave existing details intact.
         if (req.getLicenseNumber() != null) driver.setLicenseNumber(req.getLicenseNumber());
         if (req.getLicenseExpiry() != null) driver.setLicenseExpiry(req.getLicenseExpiry());
         if (req.getServiceArea() != null) driver.setServiceArea(normaliseArea(req.getServiceArea()));
@@ -149,6 +153,7 @@ public class DriverService {
      */
     public List<DriverResponse> findAvailable(String serviceArea, Double lat, Double lng,
                                               Double radiusKm, Integer minCapacity) {
+        // A distance search needs both coordinates; without them, no radius filter is applied.
         if ((lat == null) != (lng == null)) {
             throw new BadRequestException("Provide both lat and lng, or neither");
         }
@@ -157,6 +162,8 @@ public class DriverService {
         int seats = minCapacity != null ? minCapacity : 1;
         String area = normaliseArea(serviceArea);
 
+        // First select approved, available drivers, then apply the optional area and seat filters.
+        // A vehicle with unspecified capacity is treated as suitable for any requested seat count.
         return driverRepository.findByStatusAndAvailability(DriverStatus.APPROVED, AvailabilityStatus.AVAILABLE)
                 .stream()
                 .filter(d -> area == null || area.equalsIgnoreCase(d.getServiceArea()))
@@ -165,12 +172,14 @@ public class DriverService {
                 .map(d -> {
                     Double distance = null;
                     if (byDistance) {
+                        // Skip drivers with no position or whose rounded distance exceeds the radius.
                         if (d.getCurrentLat() == null || d.getCurrentLng() == null) return null;
                         distance = GeoUtils.round(GeoUtils.distanceKm(lat, lng, d.getCurrentLat(), d.getCurrentLng()));
                         if (distance > radius) return null;
                     }
                     return DriverResponse.from(d, vehicleResponses(d), distance);
                 })
+                // Remove skipped drivers and order located matches from nearest to farthest.
                 .filter(Objects::nonNull)
                 .sorted(Comparator.comparing(DriverResponse::getDistanceKm,
                         Comparator.nullsLast(Comparator.naturalOrder())))
@@ -179,11 +188,13 @@ public class DriverService {
 
     public void delete(String id) {
         Driver driver = findOr404(id);
+        // MongoDB does not cascade this relationship, so remove the driver's vehicles explicitly.
         vehicleRepository.findByDriverId(driver.getId()).forEach(vehicleRepository::delete);
         driverRepository.delete(driver);
     }
 
     private Driver saveLocation(Driver driver, double lat, double lng) {
+        // Save the coordinates together with timestamps recording this update.
         driver.setCurrentLat(lat);
         driver.setCurrentLng(lng);
         driver.setLocationUpdatedAt(Instant.now());
@@ -196,6 +207,7 @@ public class DriverService {
     }
 
     private List<VehicleResponse> vehicleResponses(Driver driver) {
+        // Profile responses include all registered vehicles, including inactive ones.
         return vehicleRepository.findByDriverId(driver.getId()).stream().map(VehicleResponse::from).toList();
     }
 
@@ -204,10 +216,12 @@ public class DriverService {
     }
 
     private static String normaliseArea(String area) {
+        // Treat blank areas as absent and remove surrounding whitespace from supplied names.
         return area == null || area.isBlank() ? null : area.trim();
     }
 
     private Driver findOr404(String id) {
+        // The global exception handler converts a missing driver into an HTTP 404 response.
         return driverRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Driver not found with id: " + id));
     }

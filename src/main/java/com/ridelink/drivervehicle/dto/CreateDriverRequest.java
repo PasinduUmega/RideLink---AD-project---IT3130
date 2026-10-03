@@ -7,6 +7,7 @@ import lombok.Setter;
 
 import java.time.LocalDate;
 
+/** Driver registration input; user ID and license are required, and any expiry must be in the future. */
 @Getter
 @Setter
 public class CreateDriverRequest {

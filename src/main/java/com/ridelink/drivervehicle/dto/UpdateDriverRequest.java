@@ -6,6 +6,7 @@ import lombok.Setter;
 
 import java.time.LocalDate;
 
+/** Optional profile changes; the service preserves existing values for fields left null. */
 @Getter
 @Setter
 public class UpdateDriverRequest {

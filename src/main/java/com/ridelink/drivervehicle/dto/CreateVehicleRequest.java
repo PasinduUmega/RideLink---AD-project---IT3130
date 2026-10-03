@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Positive;
 import lombok.Getter;
 import lombok.Setter;
 
+/** Vehicle registration input; validation requires owner, make, model and plate, plus positive capacity if supplied. */
 @Getter
 @Setter
 public class CreateVehicleRequest {

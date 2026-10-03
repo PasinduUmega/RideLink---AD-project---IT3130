@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/** Receives driver API requests, validates request bodies and delegates business rules to the service. */
 @RestController
 @RequestMapping("/api/drivers")
 public class DriverController {
@@ -20,11 +21,13 @@ public class DriverController {
         this.driverService = driverService;
     }
 
+    // Create a driver profile and return HTTP 201 with the saved profile.
     @PostMapping
     public ResponseEntity<DriverResponse> create(@Valid @RequestBody CreateDriverRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(driverService.create(request));
     }
 
+    // The optional status parameter limits the list to one approval status.
     @GetMapping
     public ResponseEntity<List<DriverResponse>> getAll(@RequestParam(required = false) DriverStatus status) {
         if (status != null) {
@@ -49,6 +52,7 @@ public class DriverController {
         return ResponseEntity.ok(driverService.getById(id));
     }
 
+    // Look up a profile using the account-service user ID instead of the driver ID.
     @GetMapping("/by-user/{userId}")
     public ResponseEntity<DriverResponse> getByUserId(@PathVariable String userId) {
         return ResponseEntity.ok(driverService.getByUserId(userId));
@@ -59,28 +63,33 @@ public class DriverController {
         return ResponseEntity.ok(driverService.update(id, request));
     }
 
+    // Change approval status, such as PENDING to APPROVED.
     @PatchMapping("/{id}/status")
     public ResponseEntity<DriverResponse> updateStatus(@PathVariable String id, @Valid @RequestBody UpdateDriverStatusRequest request) {
         return ResponseEntity.ok(driverService.updateStatus(id, request));
     }
 
+    // Change whether the driver is OFFLINE, AVAILABLE or ON_TRIP.
     @PatchMapping("/{id}/availability")
     public ResponseEntity<DriverResponse> updateAvailability(@PathVariable String id,
                                                              @Valid @RequestBody UpdateAvailabilityRequest request) {
         return ResponseEntity.ok(driverService.updateAvailability(id, request));
     }
 
+    // Accept latitude and longitude supplied by the caller.
     @PutMapping("/{id}/location")
     public ResponseEntity<DriverResponse> updateLocation(@PathVariable String id,
                                                          @Valid @RequestBody UpdateLocationRequest request) {
         return ResponseEntity.ok(driverService.updateLocation(id, request));
     }
 
+    // Generate a nearby simulated position for the driver.
     @PostMapping("/{id}/location/simulate")
     public ResponseEntity<DriverResponse> simulateLocation(@PathVariable String id) {
         return ResponseEntity.ok(driverService.simulateLocation(id));
     }
 
+    // Delete the profile and its vehicles, then return HTTP 204 with no body.
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable String id) {
         driverService.delete(id);

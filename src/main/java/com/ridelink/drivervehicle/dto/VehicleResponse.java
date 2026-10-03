@@ -7,6 +7,7 @@ import lombok.Getter;
 
 import java.time.Instant;
 
+/** Defines vehicle data returned to API clients separately from the MongoDB document. */
 @Getter
 @Builder
 @AllArgsConstructor
@@ -23,6 +24,7 @@ public class VehicleResponse {
     private Instant createdAt;
 
     public static VehicleResponse from(Vehicle v) {
+        // Copy the stored vehicle's public response fields into a response object.
         return VehicleResponse.builder()
                 .id(v.getId())
                 .driverId(v.getDriverId())
