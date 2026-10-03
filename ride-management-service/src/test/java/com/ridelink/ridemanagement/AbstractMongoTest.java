@@ -22,7 +22,7 @@ public abstract class AbstractMongoTest {
         DockerImageName.parse("mongo:6.0.9")
     )
         .withStartupTimeout(Duration.ofSeconds(60))
-        .waitingFor(Wait.forLogMessage(".*waiting for connections.*", 1));
+        .waitingFor(Wait.forListeningPort());
 
     @DynamicPropertySource
     static void setProperties(DynamicPropertyRegistry registry) {
