@@ -1,12 +1,8 @@
 package com.ridelink.ridemanagement;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
 
-@SpringBootTest
-@ActiveProfiles("test")
-class RideManagementServiceApplicationTests {
+class RideManagementServiceApplicationTests extends AbstractMongoTest {
 
     @Test
     void contextLoads() {
