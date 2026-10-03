@@ -1,4 +1,9 @@
 server:
+  port: 8084
+
+spring:
+  application:
+    name: fare-payment-service
   port: 8082
 
 spring:
@@ -8,6 +13,19 @@ spring:
     default-property-inclusion: non_null
 
 jwt:
+  secret: ${JWT_SECRET:ridelink-shared-super-secret-key-change-me-in-prod-0123456789}
+
+# Fare rule (see FareCalculator):
+#   totalFare = max(minimumFare, baseFare + distanceKm x perKmRate + durationMinutes x perMinuteRate)
+# durationMinutes defaults to distanceKm / averageSpeedKmh x 60 when not supplied.
+fare:
+  base-fare: ${FARE_BASE:2.50}
+  per-km-rate: ${FARE_PER_KM:1.20}
+  per-minute-rate: ${FARE_PER_MINUTE:0.20}
+  minimum-fare: ${FARE_MINIMUM:5.00}
+  average-speed-kmh: ${FARE_AVG_SPEED_KMH:30}
+  currency: ${FARE_CURRENCY:USD}
+
   # Must match the secret used by account-service - this service only
   # validates tokens, it never issues them.
   secret: ${JWT_SECRET:ridelink-shared-super-secret-key-change-me-in-prod-0123456789}
@@ -20,6 +38,7 @@ management:
 
 logging:
   level:
+    com.ridelink.farepayment: INFO
     com.ridelink.drivervehicle: INFO
 
 ---
@@ -36,4 +55,5 @@ spring:
       on-profile: '!test'
   data:
     mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:27017/ridelink_payments}
       uri: ${MONGODB_URI:mongodb://localhost:27017/ridelink_drivers}
