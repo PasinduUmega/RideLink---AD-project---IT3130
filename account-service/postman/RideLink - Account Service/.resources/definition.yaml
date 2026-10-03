@@ -1,0 +1,29 @@
+$kind: collection
+description: |-
+  Auth and user endpoints for account-service (port 8081).
+
+  1. Run POST Register Rider / Driver / Admin - each creates a separate user and saves its own token.
+  2. The newest token becomes {{token}}; every /api/users request sends it as a Bearer token automatically.
+  3. Use the 'Use Rider/Driver/Admin token' requests to switch which user you are acting as.
+  4. Copy {{token}} into another RideLink service's Postman {{token}} to call it as the same user.
+variables:
+  baseUrl: http://localhost:8081
+  token: ""
+  userId: ""
+  email: rider@example.com
+  password: secret123
+  riderToken: ""
+  riderId: ""
+  riderEmail: ""
+  driverToken: ""
+  driverId: ""
+  driverEmail: ""
+  adminToken: ""
+  adminId: ""
+  adminEmail: ""
+auth:
+  - id: 4198b519-8bd8-4374-8a7b-da4f02bfaf7c
+    type: bearer
+    name: bearer auth
+    credentials:
+      token: "{{token}}"

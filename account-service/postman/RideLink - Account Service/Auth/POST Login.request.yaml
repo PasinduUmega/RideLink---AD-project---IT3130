@@ -1,0 +1,46 @@
+$kind: http-request
+description: Logs in with {{email}} / {{password}} and returns a fresh JWT for that user. Saves it as {{token}} and as {{<role>Token}}. Returns 200 OK.
+url: "{{baseUrl}}/api/auth/login"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "{{email}}",
+      "password": "{{password}}"
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      // Save to the active environment AND the collection, so the value is never
+      // shadowed by an empty environment variable of the same name.
+      function save(key, value) {
+          pm.collectionVariables.set(key, value);
+          if (pm.environment.name) { pm.environment.set(key, value); }
+      }
+
+      pm.test('status is 200', function () {
+          pm.response.to.have.status(200);
+      });
+
+      if (pm.response.code === 200) {
+          var body = pm.response.json();
+          var role = body.user.role.toLowerCase();   // rider | driver | admin
+
+          // Active token - sent by the collection's Bearer auth on every request
+          save('token', body.token);
+          save('userId', body.user.id);
+
+          // Separate token per role: riderToken / driverToken / adminToken
+          save(role + 'Token', body.token);
+          save(role + 'Id', body.user.id);
+
+          console.log('Saved ' + role + ' token for ' + body.user.email + ' (id=' + body.user.id + ')');
+      }
+    language: text/javascript
+examples: ./.resources/POST Login.resources/examples
+order: 4000
