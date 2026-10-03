@@ -1,0 +1,103 @@
+version: "3.9"
+
+x-jwt-secret: &jwt-secret ridelink-shared-super-secret-key-change-me-in-prod-0123456789
+x-mongo-healthcheck: &mongo-healthcheck
+  test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+  interval: 5s
+  timeout: 5s
+  retries: 10
+
+services:
+  # ---------- Databases (one per service, per the database-per-service pattern) ----------
+  accounts-db:
+    image: mongo:7.0
+    ports:
+      - "27017:27017"
+    volumes:
+      - accounts-db-data:/data/db
+    healthcheck: *mongo-healthcheck
+
+  drivers-db:
+    image: mongo:7.0
+    ports:
+      - "27018:27017"
+    volumes:
+      - drivers-db-data:/data/db
+    healthcheck: *mongo-healthcheck
+
+  rides-db:
+    image: mongo:7.0
+    ports:
+      - "27019:27017"
+    volumes:
+      - rides-db-data:/data/db
+    healthcheck: *mongo-healthcheck
+
+  payments-db:
+    image: mongo:7.0
+    ports:
+      - "27020:27017"
+    volumes:
+      - payments-db-data:/data/db
+    healthcheck: *mongo-healthcheck
+
+  # ---------- Services ----------
+  account-service:
+    build: ../account-service
+    ports:
+      - "8081:8081"
+    environment:
+      DB_HOST: accounts-db
+      DB_PORT: 27017
+      DB_NAME: ridelink_accounts
+      JWT_SECRET: *jwt-secret
+    depends_on:
+      accounts-db:
+        condition: service_healthy
+
+  driver-vehicle-service:
+    build: ../driver-vehicle-service
+    ports:
+      - "8082:8082"
+    environment:
+      DB_HOST: drivers-db
+      DB_PORT: 27017
+      DB_NAME: ridelink_drivers
+      JWT_SECRET: *jwt-secret
+    depends_on:
+      drivers-db:
+        condition: service_healthy
+
+  ride-management-service:
+    build: ../ride-management-service
+    ports:
+      - "8083:8083"
+    environment:
+      DB_HOST: rides-db
+      DB_PORT: 27017
+      DB_NAME: ridelink_rides
+      JWT_SECRET: *jwt-secret
+      FARE_SERVICE_URL: http://fare-payment-service:8084
+      DRIVER_SERVICE_URL: http://driver-vehicle-service:8082
+    depends_on:
+      rides-db:
+        condition: service_healthy
+
+  fare-payment-service:
+    build: ../fare-payment-service
+    ports:
+      - "8084:8084"
+    environment:
+      DB_HOST: payments-db
+      DB_PORT: 27017
+      DB_NAME: ridelink_payments
+      JWT_SECRET: *jwt-secret
+    depends_on:
+      payments-db:
+        condition: service_healthy
+
+volumes:
+  accounts-db-data:
+  drivers-db-data:
+  rides-db-data:
+  payments-db-data:

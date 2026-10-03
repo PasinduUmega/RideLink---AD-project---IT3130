@@ -1,0 +1,3 @@
+$kind: collection
+description: "All endpoints in this folder require the Authorization: Bearer {{token}} header, which the collection adds automatically."
+order: 2000

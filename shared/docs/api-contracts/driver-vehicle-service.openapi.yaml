@@ -1,0 +1,6 @@
+openapi: 3.0.3
+info:
+  title: driver-vehicle-service
+  version: 0.1.0
+  description: TODO - describe the driver-vehicle-service API
+paths: {}

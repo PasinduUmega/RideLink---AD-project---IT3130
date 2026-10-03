@@ -1,0 +1,30 @@
+name: RideLink - Local
+values:
+  - key: baseUrl
+    value: 'http://localhost:8081'
+  - key: email
+    value: rider@example.com
+  - key: password
+    value: secret123
+  - key: token
+    value: ''
+  - key: userId
+    value: ''
+  - key: riderToken
+    value: ''
+  - key: riderId
+    value: ''
+  - key: riderEmail
+    value: ''
+  - key: driverToken
+    value: ''
+  - key: driverId
+    value: ''
+  - key: driverEmail
+    value: ''
+  - key: adminToken
+    value: ''
+  - key: adminId
+    value: ''
+  - key: adminEmail
+    value: ''

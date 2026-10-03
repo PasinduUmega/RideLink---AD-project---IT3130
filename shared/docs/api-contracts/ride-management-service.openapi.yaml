@@ -1,0 +1,6 @@
+openapi: 3.0.3
+info:
+  title: ride-management-service
+  version: 0.1.0
+  description: TODO - describe the ride-management-service API
+paths: {}

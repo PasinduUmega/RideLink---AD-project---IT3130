@@ -1,0 +1,9 @@
+spring:
+  data:
+    mongodb:
+      database: ridelink_accounts_test
+      # MongoDB connection URI will be set dynamically by Testcontainers via @DynamicPropertySource
+
+jwt:
+  secret: test-secret-key-for-unit-tests-only-not-for-prod-0123456789
+  expiration-ms: 3600000

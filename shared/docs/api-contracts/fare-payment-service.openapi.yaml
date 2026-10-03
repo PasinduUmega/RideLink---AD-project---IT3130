@@ -1,0 +1,6 @@
+openapi: 3.0.3
+info:
+  title: fare-payment-service
+  version: 0.1.0
+  description: TODO - describe the fare-payment-service API
+paths: {}

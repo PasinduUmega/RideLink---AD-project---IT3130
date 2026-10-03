@@ -1,0 +1,29 @@
+$kind: http-request
+description: Makes the saved {{adminToken}} the active Bearer token, so the Users requests run as that admin.
+url: "{{baseUrl}}/actuator/health"
+method: GET
+auth:
+  type: noauth
+scripts:
+  - type: beforeRequest
+    code: |-
+      // Save to the active environment AND the collection, so the value is never
+      // shadowed by an empty environment variable of the same name.
+      function save(key, value) {
+          pm.collectionVariables.set(key, value);
+          if (pm.environment.name) { pm.environment.set(key, value); }
+      }
+
+      var t = pm.variables.get('adminToken');
+      if (!t) { throw new Error('No adminToken saved yet - run POST Register Admin first'); }
+      save('token', t);
+      save('userId', pm.variables.get('adminId'));
+      console.log('Active token is now the admin token');
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('token switched', function () {
+          pm.expect(pm.variables.get('token')).to.be.a('string').and.not.empty;
+      });
+    language: text/javascript
+order: 7000

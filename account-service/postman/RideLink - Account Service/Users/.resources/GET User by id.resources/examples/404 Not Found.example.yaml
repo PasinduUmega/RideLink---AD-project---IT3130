@@ -1,0 +1,19 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/api/users/000000000000000000000000"
+  method: GET
+response:
+  statusCode: 404
+  statusText: Not Found
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "timestamp": "2026-09-13T13:00:33.776444200Z",
+        "status": 404,
+        "error": "Not Found",
+        "message": "User not found with id: 9999"
+      }
+order: 2000
