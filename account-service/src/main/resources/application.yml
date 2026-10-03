@@ -37,4 +37,4 @@ spring:
       on-profile: '!test'
   data:
     mongodb:
-      uri: ${MONGODB_URI:mongodb://localhost:27017/ridelink_accounts}
+      uri: ${MONGODB_URI:mongodb://${DB_HOST:127.0.0.1}:${DB_PORT:27017}/${DB_NAME:ridelink_accounts}}
