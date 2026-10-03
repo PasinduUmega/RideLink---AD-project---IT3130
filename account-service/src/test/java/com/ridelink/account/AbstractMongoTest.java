@@ -10,11 +10,11 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 @SpringBootTest
 @ActiveProfiles("test")
-@Testcontainers
+@Testcontainers(disabledWithoutDocker = true)
 public abstract class AbstractMongoTest {
 
     @Container
-    private static final MongoDBContainer mongoDBContainer = new MongoDBContainer("mongo:6.0.9");
+    static final MongoDBContainer mongoDBContainer = new MongoDBContainer("mongo:6.0.9");
 
     @DynamicPropertySource
     static void setProperties(DynamicPropertyRegistry registry) {
