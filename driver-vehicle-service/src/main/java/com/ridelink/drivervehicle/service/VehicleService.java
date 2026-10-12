@@ -80,6 +80,13 @@ public class VehicleService {
         return VehicleResponse.from(vehicleRepository.save(vehicle));
     }
 
+    public VehicleResponse activate(String id) {
+        Vehicle vehicle = findOr404(id);
+        vehicle.setActive(true);
+        vehicle.setUpdatedAt(Instant.now());
+        return VehicleResponse.from(vehicleRepository.save(vehicle));
+    }
+
     private Vehicle findOr404(String id) {
         return vehicleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found with id: " + id));

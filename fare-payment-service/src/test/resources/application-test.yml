@@ -2,10 +2,12 @@ spring:
   data:
     mongodb:
       database: ridelink_payments_test
-      socket-timeout-ms: 60000
-      server-selection-timeout: 60000
-      connect-timeout-ms: 30000
-      # MongoDB connection URI will be set dynamically by Testcontainers via @DynamicPropertySource
+
+de:
+  flapdoodle:
+    mongodb:
+      embedded:
+        version: 6.0.9
 
 jwt:
   secret: test-secret-key-for-unit-tests-only-not-for-prod-0123456789

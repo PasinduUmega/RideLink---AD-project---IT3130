@@ -9,12 +9,16 @@ import com.ridelink.account.service.AuthService;
 import com.ridelink.account.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class UserServiceTests extends AbstractMongoTest {
+@SpringBootTest
+@ActiveProfiles("test")
+class UserServiceTests {
 
     @Autowired
     private AuthService authService;

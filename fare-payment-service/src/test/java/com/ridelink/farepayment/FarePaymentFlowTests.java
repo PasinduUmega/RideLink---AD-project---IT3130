@@ -11,12 +11,16 @@ import com.ridelink.farepayment.service.PaymentService;
 import com.ridelink.farepayment.service.ReceiptService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class FarePaymentFlowTests extends AbstractMongoTest {
+@SpringBootTest
+@ActiveProfiles("test")
+class FarePaymentFlowTests {
 
     @Autowired
     private FareService fareService;

@@ -52,4 +52,9 @@ public class VehicleController {
     public ResponseEntity<VehicleResponse> deactivate(@PathVariable String id) {
         return ResponseEntity.ok(vehicleService.deactivate(id));
     }
+
+    @PatchMapping("/{id}/activate")
+    public ResponseEntity<VehicleResponse> activate(@PathVariable String id) {
+        return ResponseEntity.ok(vehicleService.activate(id));
+    }
 }

@@ -10,10 +10,14 @@ import com.ridelink.account.security.JwtUtil;
 import com.ridelink.account.service.AuthService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class AccountServiceApplicationTests extends AbstractMongoTest {
+@SpringBootTest
+@ActiveProfiles("test")
+class AccountServiceApplicationTests {
 
     @Autowired
     private JwtUtil jwtUtil;

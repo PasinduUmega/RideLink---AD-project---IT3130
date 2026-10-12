@@ -3,6 +3,7 @@ package com.ridelink.drivervehicle.config;
 import com.ridelink.drivervehicle.security.JwtAuthFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -26,6 +27,7 @@ public class SecurityConfig {
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/**").permitAll()
+                        .requestMatchers(HttpMethod.PATCH, "/api/vehicles/*/activate", "/api/vehicles/*/deactivate").hasRole("ADMIN")
                         .requestMatchers("/api/drivers/**", "/api/vehicles/**").authenticated()
                         .anyRequest().permitAll()
                 )
