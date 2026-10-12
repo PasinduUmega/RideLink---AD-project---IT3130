@@ -27,10 +27,10 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: maven
-          cache-dependency-path: ${{ matrix.service }}/pom.xml
+          cache-dependency-path: backend/${{ matrix.service }}/pom.xml
 
       - name: Build and run tests (${{ matrix.service }})
-        working-directory: ./${{ matrix.service }}
+        working-directory: ./backend/${{ matrix.service }}
         run: mvn -B clean verify
 
       - name: Upload surefire reports on failure
@@ -38,4 +38,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: surefire-reports-${{ matrix.service }}
-          path: ${{ matrix.service }}/target/surefire-reports/
+          path: backend/${{ matrix.service }}/target/surefire-reports/
